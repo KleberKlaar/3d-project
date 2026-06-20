@@ -1,0 +1,3 @@
+# Teste de cache (Fase 2) — leve, sem CUDA, sem torch.
+runpod>=1.6
+huggingface_hub>=0.23

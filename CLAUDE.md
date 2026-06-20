@@ -92,14 +92,14 @@ que um bug no TRELLIS.2 trave o teste do FLUX, e vice-versa.
 ## Estado Atual do Projeto
 
 - [x] Fase 0 — Estrutura do repositório
-- [ ] Fase 1 — Worker mock + validação do client.py (sem GPU)
+- [x] Fase 1 — Worker mock + validação do client.py (sem GPU)
 - [ ] Fase 2 — Network Volume + estratégia de cache de modelos
 - [ ] Fase 3 — Worker isolado: só texto → imagem (FLUX.1-schnell)
 - [ ] Fase 4 — Worker isolado: só imagem → 3D (TRELLIS.2)
 - [ ] Fase 5 — Integração completa do pipeline (`docker/full`)
 - [ ] Fase 6 — Hardening / produção
 
-**Fase atual: 1**
+**Fase atual: 2**
 
 ---
 

@@ -40,7 +40,36 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
   `docker/mock/Dockerfile`). Se o context for a raiz do repo, os `COPY` quebram.
 - `.claude/` adicionado ao `.gitignore` (config local, não vai pro repo).
 
+### Resultado — VALIDADA ✅
+- Endpoint mock CPU criado no RunPod: `mudhnblihi78wg`
+  (CPU 3 GHz, 2 vCPUs / 4 GB, Min workers 0, build context `docker/mock`).
+- Descoberta na UI: a tela de fonte GitHub TEM "Build context" em
+  *Advanced settings* (não só "Dockerfile path"). Então o Dockerfile pode usar
+  `COPY` relativo normalmente, com build context = `docker/mock`.
+- Aviso "Could not find runpod.serverless.start() in your repo" pode ser
+  ignorado: o RunPod varre só a raiz; o handler está em `docker/mock/handler.py`.
+- Teste de ponta a ponta OK: job `COMPLETED` em ~11s, `teste.glb` (cubo) e
+  `teste_referencia.png` baixados; usuário abriu o `.glb` e confirmou o cubo 3D.
+
+---
+
+## Fase 2 — Network Volume + estratégia de cache de modelos
+
+### Convenção de cache (DEFINIÇÃO OFICIAL DO PROJETO)
+- **`HF_HOME=/runpod-volume/hf-cache`** — definida como `ENV` no Dockerfile.
+  - Cobre FLUX (via `diffusers`) E TRELLIS.2 — ambos baixam pesos pelo HF Hub.
+  - Precisa estar no ambiente ANTES de importar `huggingface_hub`/`diffusers`/
+    `transformers`. Por isso vai como `ENV` no Docker (não set em runtime).
+- `/runpod-volume` é o ponto de montagem do **Network Volume** (persistente
+  entre cold starts). Os pesos NUNCA ficam na imagem nem no container disk.
+
+### Worker de teste de cache: `docker/cache_test/`
+- `handler.py`: baixa um modelo minúsculo (`hf-internal-testing/tiny-random-bert`)
+  e relata `cache_hit`, `download_seconds`, `hf_home`, `volume_mounted`.
+- Config no endpoint: Dockerfile path `docker/cache_test/Dockerfile`,
+  build context `docker/cache_test`, e **anexar Network Volume em /runpod-volume**.
+
 ### Pendente (depende do usuário no painel do RunPod)
-- [ ] Criar endpoint serverless **CPU** (sem GPU), fonte GitHub, branch `main`.
-- [ ] Rodar `py client.py "teste" --out ./saidas --name teste` e confirmar que
-      `teste.glb` + `teste_referencia.png` chegam corretos.
+- [ ] Criar Network Volume (>=100 GB) — anotar ID/nome aqui.
+- [ ] Endpoint CPU de teste com o volume anexado em /runpod-volume.
+- [ ] 1ª chamada: `cache_hit=false`, baixa. 2ª chamada: `cache_hit=true`, mais rápida.
