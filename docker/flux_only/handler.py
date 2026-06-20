@@ -48,6 +48,14 @@ def _get_pipe():
 
     from diffusers import FluxPipeline
 
+    # FLUX.1-schnell é gated: precisa de token. O huggingface_hub lê HF_TOKEN
+    # automaticamente; aqui normalizamos nomes alternativos para o mesmo env var.
+    for alt in ("HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_TOKEN", "HF_API_TOKEN"):
+        if os.environ.get(alt) and not os.environ.get("HF_TOKEN"):
+            os.environ["HF_TOKEN"] = os.environ[alt]
+    if not os.environ.get("HF_TOKEN"):
+        print("[flux] AVISO: HF_TOKEN ausente — download do FLUX (gated) pode falhar", flush=True)
+
     print(f"[flux] carregando {MODEL_ID} (HF_HOME={os.environ.get('HF_HOME')})...", flush=True)
     t0 = time.monotonic()
     pipe = FluxPipeline.from_pretrained(MODEL_ID, torch_dtype=torch.bfloat16)
