@@ -1,5 +1,10 @@
 # Worker MOCK (Fase 1) — imagem leve, SEM CUDA.
 # Objetivo: testar só o transporte HTTP do RunPod. Deve buildar em < 1 min.
+#
+# No endpoint RunPod (integração GitHub), configurar em Advanced settings:
+#   Dockerfile path: docker/mock/Dockerfile
+#   Build context:   docker/mock
+# Assim os COPY relativos abaixo funcionam.
 
 FROM python:3.11-slim
 
