@@ -17,10 +17,18 @@ Validação esperada:
 """
 
 import os
+import sys
 import time
 import traceback
 
-import runpod
+# Print no NÍVEL DE MÓDULO: roda assim que o Python carrega o arquivo, antes de
+# qualquer coisa. Se isto não aparecer nos logs, o problema é o entrypoint/pip,
+# não o nosso código.
+print("[cache-test] modulo carregado, importando runpod...", flush=True)
+
+import runpod  # noqa: E402
+
+print(f"[cache-test] runpod importado. HF_HOME={os.environ.get('HF_HOME')!r}", flush=True)
 
 # Modelo de teste minúsculo (alguns poucos MB), só para exercitar o cache.
 # Não tem nada a ver com o pipeline 3D — é descartável.
@@ -77,4 +85,11 @@ def handler(event):
 
 
 if __name__ == "__main__":
-    runpod.serverless.start({"handler": handler})
+    print("[cache-test] chamando runpod.serverless.start()...", flush=True)
+    try:
+        runpod.serverless.start({"handler": handler})
+    except Exception as exc:  # noqa: BLE001
+        print("[cache-test] FALHA no serverless.start:", exc, flush=True)
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
