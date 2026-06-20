@@ -99,6 +99,33 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 
 ---
 
+## Fase 4 — TRELLIS.2 (imagem -> 3D)
+
+- VRAM mínima do TRELLIS.2: **24 GB** (a GPU atual de 48 GB sobra — a
+  preocupação com 80 GB era infundada; 48 GB é confortável).
+- Modelo: `microsoft/TRELLIS.2-4B`, classe `Trellis2ImageTo3DPipeline`.
+  API (do example.py): `pipe.run(image)[0]` -> `mesh.simplify(16777216)` ->
+  `o_voxel.postprocess.to_glb(...)` -> `glb.export(..., extension_webp=True)`.
+- `docker/trellis_only/`: Dockerfile reproduz o setup.sh oficial SEM conda
+  (Python 3.10 do sistema), base `nvidia/cuda:12.4.1-cudnn-devel`, torch 2.6.0/
+  cu124. Compila as 6 extensões: flash-attn 2.7.3, nvdiffrast v0.4.0,
+  nvdiffrec (branch renderutils), CuMesh, FlexGEMM, o-voxel (vem no repo).
+- ⚠️ **Build context = RAIZ do repo** (`.`) — o Dockerfile clona o TRELLIS.2
+  dentro da imagem e copia handler de docker/trellis_only/.
+- ⚠️ Build LONGO (20-40 min) e frágil (compila CUDA). flash-attn é o passo mais
+  lento/arriscado. TORCH_CUDA_ARCH_LIST cobre Ada(8.9)/A100(8.0)/H100(9.0).
+- handler: texture_size default 2048 (exemplo usa 4096) p/ economizar VRAM/tempo;
+  decimation_target 1000000. Ambos ajustáveis via input.
+- Dependências verificadas (existem com tags certas): nvdiffrast v0.4.0,
+  nvdiffrec@renderutils, CuMesh, FlexGEMM, o-voxel dentro do TRELLIS.2.
+
+### Pendente
+- [ ] Criar endpoint GPU (48 GB, build context RAIZ), anexar volume.
+- [ ] Build pode estourar tempo — acompanhar logs; corrigir extensão que falhar.
+- [ ] Testar com as imagens da Fase 3 (gato/cadeira/vaso) -> abrir .glb e validar.
+
+---
+
 ## Fase 3 — FLUX.1-schnell (texto -> imagem)
 
 - `docker/flux_only/`: Dockerfile (base `pytorch/pytorch:2.4.1-cuda12.1-...`),
