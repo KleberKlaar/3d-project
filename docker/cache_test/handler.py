@@ -79,6 +79,49 @@ def handler(event):
     if (event.get("input") or {}).get("probe"):
         print("[cache-test] modo PROBE (sem download)", flush=True)
         return _diagnostico_volume()
+    # Modo storage: lista o conteúdo do volume e, com clean=true, apaga tudo
+    # dentro de /runpod-volume (deixa o volume pronto/limpo para modelos reais).
+    inp = event.get("input") or {}
+    if inp.get("storage"):
+        import shutil
+
+        root = "/runpod-volume"
+        print(f"[cache-test] modo STORAGE (clean={bool(inp.get('clean'))})", flush=True)
+        if not os.path.isdir(root):
+            return {"error": "/runpod-volume não montado"}
+
+        def _uso():
+            total = used = free = 0
+            try:
+                st = shutil.disk_usage(root)
+                total, used, free = st.total, st.used, st.free
+            except Exception:  # noqa: BLE001
+                pass
+            itens = sorted(os.listdir(root))
+            return {
+                "total_gb": round(total / 1e9, 2),
+                "used_gb": round(used / 1e9, 2),
+                "free_gb": round(free / 1e9, 2),
+                "itens_raiz": itens,
+            }
+
+        antes = _uso()
+        print(f"[cache-test] antes: {antes}", flush=True)
+        removidos = []
+        if inp.get("clean"):
+            for nome in os.listdir(root):
+                caminho = os.path.join(root, nome)
+                try:
+                    if os.path.isdir(caminho) and not os.path.islink(caminho):
+                        shutil.rmtree(caminho)
+                    else:
+                        os.remove(caminho)
+                    removidos.append(nome)
+                except Exception as e:  # noqa: BLE001
+                    print(f"[cache-test] falha ao remover {nome}: {e}", flush=True)
+            print(f"[cache-test] removidos: {removidos}", flush=True)
+        depois = _uso()
+        return {"antes": antes, "removidos": removidos, "depois": depois}
     # Modo nettest: {"input": {"nettest": true}} testa SÓ a rede de saída, com
     # timeout curto, e RETORNA o resultado no output (não depende de logs).
     if (event.get("input") or {}).get("nettest"):
