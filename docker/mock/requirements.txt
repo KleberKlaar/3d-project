@@ -1,0 +1,3 @@
+# Dependências do worker mock (Fase 1) — leves, sem CUDA.
+runpod>=1.6
+trimesh>=4.0

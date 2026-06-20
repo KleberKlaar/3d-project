@@ -1,0 +1,5 @@
+# Dependências do cliente local (client.py).
+# Só fala HTTP com a API do RunPod — nada de IA/GPU aqui.
+
+requests>=2.31,<3
+python-dotenv>=1.0,<2   # opcional: carrega .env automaticamente

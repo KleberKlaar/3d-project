@@ -1,0 +1,43 @@
+# --- Segredos ---
+.env
+*.key
+
+# --- Config local do Claude Code ---
+.claude/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Pesos de modelo (nunca commitar) ---
+# Caso algum dia sejam baixados localmente para teste.
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+hf-cache/
+models/
+
+# --- Saídas geradas localmente ---
+*.glb
+*_referencia.png
+saidas/
+outputs/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
