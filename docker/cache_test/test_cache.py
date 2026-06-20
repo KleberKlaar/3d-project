@@ -43,12 +43,18 @@ def main() -> None:
     base = f"https://api.runpod.ai/v2/{ENDPOINT_ID}"
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
+    # "probe" como 2º argumento => testa só o volume (sem download). Útil pra
+    # isolar se o problema é o Network Volume ou o snapshot_download.
+    probe = "probe" in sys.argv[2:]
+    payload = {"input": {"probe": True}} if probe else {"input": {}}
+
     # Usa /run (assíncrono) + polling em vez de /runsync. O cold start aqui pode
     # passar de 60s (delayTime alto), o que estoura a conexão síncrona do /runsync.
     # Polling espera o tempo que for preciso.
-    print(f"[teste] enviando job para {ENDPOINT_ID} (/run)...")
+    modo = "PROBE (só volume)" if probe else "download"
+    print(f"[teste] enviando job para {ENDPOINT_ID} (/run) — modo {modo}...")
     t0 = time.monotonic()
-    r = requests.post(f"{base}/run", json={"input": {}}, headers=headers, timeout=30)
+    r = requests.post(f"{base}/run", json=payload, headers=headers, timeout=30)
     if r.status_code != 200:
         sys.exit(f"[erro] HTTP {r.status_code} no /run: {r.text}")
     job_id = r.json()["id"]

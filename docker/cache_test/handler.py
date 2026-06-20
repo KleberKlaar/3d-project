@@ -49,9 +49,36 @@ def _repo_ja_em_cache(cache_root: str, repo_id: str) -> bool:
     return any(nome.startswith(alvo) for nome in os.listdir(hub_dir))
 
 
+def _diagnostico_volume() -> dict:
+    """Testa o volume SEM baixar nada: montado? gravável? Escreve um arquivinho."""
+    info = {"volume_mounted": os.path.isdir("/runpod-volume")}
+    print(f"[cache-test] /runpod-volume montado? {info['volume_mounted']}", flush=True)
+    if not info["volume_mounted"]:
+        return info
+    try:
+        cache_root = _cache_dir()
+        os.makedirs(cache_root, exist_ok=True)
+        teste = os.path.join(cache_root, "_probe.txt")
+        t0 = time.monotonic()
+        with open(teste, "w") as fh:
+            fh.write("ok")
+        info["write_seconds"] = round(time.monotonic() - t0, 3)
+        info["writable"] = True
+        print(f"[cache-test] escrita no volume OK em {info['write_seconds']}s", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        info["writable"] = False
+        info["write_error"] = f"{type(exc).__name__}: {exc}"
+        print(f"[cache-test] ERRO ao escrever no volume: {exc}", flush=True)
+    return info
+
+
 def handler(event):
     # flush=True em TODO print: se o job for morto (timeout), o log já saiu.
     print("[cache-test] handler iniciado", flush=True)
+    # Modo diagnóstico: {"input": {"probe": true}} testa só o volume, sem download.
+    if (event.get("input") or {}).get("probe"):
+        print("[cache-test] modo PROBE (sem download)", flush=True)
+        return _diagnostico_volume()
     try:
         # Import tardio: só depois de HF_HOME já estar no ambiente (ENV do Docker).
         from huggingface_hub import snapshot_download
