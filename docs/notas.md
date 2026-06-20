@@ -115,7 +115,19 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - GPU 24 GB (schnell roda bem), volume `3d-models` (US-WA-1) em /runpod-volume,
   Execution timeout 600s, container disk ~20 GB, env var HF_TOKEN (Secret).
 
-### Pendente
-- [ ] Criar endpoint GPU, anexar volume + HF_TOKEN.
-- [ ] Testar 2-3 prompts; conferir imagens (objeto isolado, fundo limpo).
-- [ ] Observar cache: 1º cold start baixa ~24 GB; 2º bem mais rápido.
+### Resultado — VALIDADA ✅
+- Endpoint GPU `if1f2xih5aob69` (GPU ADA_48_PRO/48GB, volume 3d-models US-WA-1).
+- Problemas resolvidos no caminho (todos documentados nos commits):
+  1. torch 2.4.1 + diffusers novo quebrava import → subiu base p/ pytorch 2.5.1.
+  2. `flash_attn` pré-instalado na imagem base quebrava o import do FLUX
+     (infer_schema: pack_gqa/sm_margin) → `pip uninstall flash-attn` no Dockerfile.
+     FLUX.1-schnell não precisa de flash_attn (usa SDPA padrão).
+  3. GatedRepoError 403 → faltava ACEITAR OS TERMOS na página do modelo no HF
+     (o token sozinho não basta). Após aceitar, baixou normal.
+- Versões fixadas: diffusers==0.31.0, transformers==4.46.2, accelerate==1.1.1,
+  huggingface_hub==0.26.2. base pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime.
+- 3 imagens geradas (gato robô, cadeira, vaso): objeto isolado, fundo limpo,
+  consistentes — prontas para o TRELLIS.2 (Fase 4).
+- **CACHE PROVADO** (validação da Fase 2 com modelo real): exec time
+  127s (#1, baixa 24GB) -> 72s (#2, sem download, recarrega GPU) -> 3.2s
+  (#3, worker quente). A queda prova que o volume cacheou os pesos.
