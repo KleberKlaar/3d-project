@@ -83,7 +83,12 @@ RUN pip install --no-cache-dir /opt/TRELLIS.2/o-voxel --no-build-isolation
 RUN pip install --no-cache-dir runpod>=1.6
 
 # --- Código do worker --------------------------------------------------------
-WORKDIR /app
-COPY docker/trellis_only/handler.py .
+# O pacote `trellis2` NÃO é instalado via pip — é uma subpasta do repo clonado.
+# O example.py oficial roda da RAIZ do repo, então precisamos que /opt/TRELLIS.2
+# esteja no PYTHONPATH E ser o working dir (o código carrega assets relativos:
+# configs/, assets/hdri/...). Copiamos o handler para dentro do repo.
+ENV PYTHONPATH=/opt/TRELLIS.2
+WORKDIR /opt/TRELLIS.2
+COPY docker/trellis_only/handler.py /opt/TRELLIS.2/handler.py
 
 CMD ["python", "-u", "handler.py"]
