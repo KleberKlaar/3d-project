@@ -133,8 +133,18 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
   pip, é subpasta do repo; example.py roda da raiz. Fix: PYTHONPATH=/opt/
   TRELLIS.2 + WORKDIR lá. (commit 'fix(trellis): PYTHONPATH...') -> rebuild.
 
+### Bugs do TRELLIS resolvidos (sequência)
+1. `ModuleNotFoundError: trellis2` → PYTHONPATH=/opt/TRELLIS.2 + WORKDIR.
+2. `401 ckpts/...` → o base.py resolve sub-checkpoints relativos ao working dir.
+   Fix: snapshot_download local + os.chdir(local_dir) antes do from_pretrained.
+   (Debug provou que os 18 ckpts/*.safetensors baixaram OK — não era download.)
+3. `gated facebook/dinov3-vitl16-pretrain-lvd1689m` → o TRELLIS usa DINOv3 (Meta)
+   como image encoder, e ele é GATED (`gated: manual` — pode exigir aprovação).
+   Precisa: (a) aceitar termos do DINOv3 no HF; (b) HF_TOKEN no endpoint TRELLIS
+   (o token do FLUX serve se a conta aceitou o DINOv3).
+
 ### Pendente
-- [ ] Aguardar rebuild do TRELLIS (fix PYTHONPATH) ficar Completed.
+- [ ] Aceitar DINOv3 no HF + adicionar HF_TOKEN ao endpoint 3d-trellis.
 - [ ] Testar gato.png -> .glb; abrir no gltf-viewer/Blender e validar geometria.
 
 ---

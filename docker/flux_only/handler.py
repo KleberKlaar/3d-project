@@ -79,8 +79,12 @@ def handler(event):
         height = int(job_input.get("height", 1024))
         seed = job_input.get("seed")
 
-        prompt_final = prompt + PROMPT_SUFFIX
-        print(f"[flux] prompt: {prompt!r} (+suffix) steps={steps} {width}x{height}", flush=True)
+        # Sufixo de "objeto isolado/fundo limpo" é necessário para o pipeline 3D
+        # (input do TRELLIS), mas atrapalha geração livre de imagens. Por padrão
+        # mantém o sufixo (compatível com o pipeline); raw=true gera o prompt puro.
+        raw = bool(job_input.get("raw", False))
+        prompt_final = prompt if raw else prompt + PROMPT_SUFFIX
+        print(f"[flux] prompt: {prompt!r} raw={raw} steps={steps} {width}x{height}", flush=True)
 
         pipe = _get_pipe()
 

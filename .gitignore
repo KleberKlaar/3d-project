@@ -41,3 +41,6 @@ outputs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Imagens geradas pelo gerador
+imagens/
