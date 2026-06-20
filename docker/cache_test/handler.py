@@ -79,6 +79,33 @@ def handler(event):
     if (event.get("input") or {}).get("probe"):
         print("[cache-test] modo PROBE (sem download)", flush=True)
         return _diagnostico_volume()
+    # Modo nettest: {"input": {"nettest": true}} testa SÓ a rede de saída, com
+    # timeout curto, e RETORNA o resultado no output (não depende de logs).
+    if (event.get("input") or {}).get("nettest"):
+        print("[cache-test] modo NETTEST", flush=True)
+        import socket
+        import urllib.request
+
+        resultados = {}
+        for nome, alvo in [("dns_hf", "huggingface.co"), ("dns_google", "google.com")]:
+            t = time.monotonic()
+            try:
+                ip = socket.gethostbyname(alvo)
+                resultados[nome] = {"ok": True, "ip": ip, "s": round(time.monotonic()-t, 2)}
+            except Exception as e:  # noqa: BLE001
+                resultados[nome] = {"ok": False, "erro": f"{type(e).__name__}: {e}",
+                                    "s": round(time.monotonic()-t, 2)}
+        for nome, url in [("http_hf", "https://huggingface.co"),
+                          ("http_cf", "https://1.1.1.1")]:
+            t = time.monotonic()
+            try:
+                urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=8)
+                resultados[nome] = {"ok": True, "s": round(time.monotonic()-t, 2)}
+            except Exception as e:  # noqa: BLE001
+                resultados[nome] = {"ok": False, "erro": f"{type(e).__name__}: {e}",
+                                    "s": round(time.monotonic()-t, 2)}
+        print(f"[cache-test] nettest: {resultados}", flush=True)
+        return {"nettest": resultados}
     try:
         cache_root = _cache_dir()
         print(f"[cache-test] HF_HOME efetivo: {cache_root}", flush=True)

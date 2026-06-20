@@ -70,8 +70,11 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
   build context `docker/cache_test`, e **anexar Network Volume em /runpod-volume**.
 
 ### Network Volume criado ✅
-- Nome: `3d-models` · ID: `bt910qd19s` · 100 GB · Data center: **EU-SE-1**.
-- ⚠️ O endpoint que usa o volume PRECISA estar na região EU-SE-1.
+- Volume ATUAL em uso: `3d-models` · ID: `4netmczfoy` · 100 GB · **US-WA-1**.
+- (O primeiro, `bt910qd19s` em EU-SE-1, foi abandonado por falta de capacidade
+  de worker naquela região; recriado em US-WA-1.)
+- Endpoint `fium5h1j1z3jdn` está em US-WA-1, mesmo volume — config consistente.
+- executionTimeoutMs confirmado via API = 600000 (600s). idleTimeout=5.
 
 ### Endpoint de teste de cache ✅
 - Endpoint id: `7mpkwd0asefeoc` (CPU, volume `3d-models` em /runpod-volume).
