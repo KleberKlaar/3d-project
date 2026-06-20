@@ -1,0 +1,7 @@
+# FLUX_ONLY (Fase 3). torch já vem na imagem base do PyTorch (ver Dockerfile).
+diffusers>=0.31
+transformers>=4.44
+accelerate>=0.33
+sentencepiece>=0.2
+protobuf>=4
+runpod>=1.6
