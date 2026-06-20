@@ -53,6 +53,22 @@ def _get_pipe():
     local_dir = snapshot_download(MODEL_ID)
     print(f"[trellis] snapshot em {local_dir} ({time.monotonic()-t0:.1f}s)", flush=True)
 
+    # DIAGNÓSTICO: o from_pretrained interno (models/__init__.py) testa
+    #   is_local = exists(f"{path}.json") and exists(f"{path}.safetensors")
+    # para path = f"{local_dir}/ckpts/shape_dec...". Conferimos se os arquivos
+    # realmente estão no disco — se não, o snapshot não baixou os ckpts.
+    ck = os.path.join(local_dir, "ckpts")
+    print(f"[trellis] conteudo de {ck}:", flush=True)
+    if os.path.isdir(ck):
+        for nome in sorted(os.listdir(ck))[:8]:
+            p = os.path.join(ck, nome)
+            print(f"[trellis]   {nome}  ({os.path.getsize(p)} bytes)", flush=True)
+    else:
+        print("[trellis]   (pasta ckpts NÃO existe no snapshot!)", flush=True)
+    probe = os.path.join(local_dir, "ckpts", "shape_dec_next_dc_f16c32_fp16")
+    print(f"[trellis] probe {probe}.json existe? {os.path.exists(probe+'.json')}; "
+          f".safetensors existe? {os.path.exists(probe+'.safetensors')}", flush=True)
+
     print("[trellis] carregando pipeline da pasta local...", flush=True)
     t1 = time.monotonic()
     pipe = Trellis2ImageTo3DPipeline.from_pretrained(local_dir)
