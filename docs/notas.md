@@ -69,7 +69,14 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - Config no endpoint: Dockerfile path `docker/cache_test/Dockerfile`,
   build context `docker/cache_test`, e **anexar Network Volume em /runpod-volume**.
 
-### Pendente (depende do usuário no painel do RunPod)
-- [ ] Criar Network Volume (>=100 GB) — anotar ID/nome aqui.
-- [ ] Endpoint CPU de teste com o volume anexado em /runpod-volume.
-- [ ] 1ª chamada: `cache_hit=false`, baixa. 2ª chamada: `cache_hit=true`, mais rápida.
+### Network Volume criado ✅
+- Nome: `3d-models` · ID: `bt910qd19s` · 100 GB · Data center: **EU-SE-1**.
+- ⚠️ O endpoint que usa o volume PRECISA estar na região EU-SE-1.
+
+### Endpoint de teste de cache ✅
+- Endpoint id: `7mpkwd0asefeoc` (CPU, volume `3d-models` em /runpod-volume).
+- Teste local: `py docker/cache_test/test_cache.py 7mpkwd0asefeoc`
+  (HTTP puro via /runsync; não usa o client.py).
+
+### Pendente
+- [ ] Rodar 2x: 1ª `cache_hit=false` (baixa). 2ª `cache_hit=true` (mais rápida).
