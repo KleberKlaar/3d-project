@@ -1,7 +1,11 @@
 # FLUX_ONLY (Fase 3). torch já vem na imagem base do PyTorch (ver Dockerfile).
-diffusers>=0.31
-transformers>=4.44
-accelerate>=0.33
-sentencepiece>=0.2
-protobuf>=4
+# Versões FIXADAS e compatíveis entre si para rodar o FLUX.1-schnell. Subir o
+# diffusers sem subir o torch quebra (infer_schema/autoencoder_kl). Estas batem
+# com o torch 2.5.1 da imagem base.
+diffusers==0.31.0
+transformers==4.46.2
+accelerate==1.1.1
+huggingface_hub==0.26.2
+sentencepiece==0.2.0
+protobuf==5.28.3
 runpod>=1.6

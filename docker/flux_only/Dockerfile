@@ -6,7 +6,8 @@
 # E anexar o Network Volume (US-WA-1) montado em /runpod-volume.
 
 # Imagem base com CUDA + PyTorch já instalados (não precisamos compilar torch).
-FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+# torch 2.5.1: compatível com diffusers 0.31 (o 2.4.1 quebra o import do FLUX).
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
 
 ENV PYTHONUNBUFFERED=1
 
