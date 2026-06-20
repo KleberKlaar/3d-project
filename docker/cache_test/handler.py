@@ -113,21 +113,14 @@ def handler(event):
         volume_montado = os.path.isdir("/runpod-volume")
         print(f"[cache-test] /runpod-volume montado? {volume_montado}", flush=True)
 
-        # PASSO 1: testar acesso de saída à internet ANTES de tocar no HF.
-        # Se o worker não tiver rede de saída, qualquer download pendura.
-        print("[cache-test] testando conectividade (HEAD huggingface.co)...", flush=True)
-        import urllib.request
+        # CORREÇÃO: o huggingface_hub usa filelock + symlinks no cache. Em sistemas
+        # de arquivos de rede (Network Volume), o filelock pode TRAVAR indefinida-
+        # mente e os symlinks podem não ser suportados — o que pendura o download
+        # até um timeout interno (~38s). Desabilitamos ambos antes de importar.
+        os.environ["HF_HUB_DISABLE_SYMLINKS"] = "1"
+        os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+        os.environ["HF_HUB_DISABLE_XET"] = "1"  # xet pode travar em FS de rede
 
-        tc = time.monotonic()
-        try:
-            req = urllib.request.Request("https://huggingface.co", method="HEAD")
-            urllib.request.urlopen(req, timeout=15)
-            print(f"[cache-test] conectividade OK em {time.monotonic()-tc:.2f}s", flush=True)
-        except Exception as net:  # noqa: BLE001
-            print(f"[cache-test] SEM CONECTIVIDADE: {net}", flush=True)
-            return {"error": f"sem rede de saida: {type(net).__name__}: {net}"}
-
-        # PASSO 2: import e download de UM arquivo minúsculo (não o repo inteiro).
         from huggingface_hub import hf_hub_download
 
         antes = _repo_ja_em_cache(cache_root, TEST_REPO)
