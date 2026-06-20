@@ -51,9 +51,13 @@ WORKDIR /opt/TRELLIS.2
 # --- setup.sh --basic --------------------------------------------------------
 RUN pip install --no-cache-dir \
         imageio imageio-ffmpeg tqdm easydict opencv-python-headless ninja \
-        trimesh transformers tensorboard pandas lpips zstandard kornia timm \
+        trimesh tensorboard pandas lpips zstandard kornia timm \
     && pip install --no-cache-dir \
         git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
+# transformers FIXADO: o DINOv3ViTModel (com atributo .layer, usado pelo TRELLIS)
+# só existe na série 4.55+. A 4.57.x tem o DINOv3 maduro. Sem pin, o resolvedor
+# pode pegar uma versão antiga (sem DINOv3) -> "object has no attribute 'layer'".
+RUN pip install --no-cache-dir "transformers==4.57.1"
 # pillow-simd costuma falhar de compilar em muitos ambientes; usamos Pillow normal.
 # gradio não é necessário no worker (sem UI) — omitido de propósito.
 
