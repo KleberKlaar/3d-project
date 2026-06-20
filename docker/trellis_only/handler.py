@@ -69,7 +69,13 @@ def _get_pipe():
     print(f"[trellis] probe {probe}.json existe? {os.path.exists(probe+'.json')}; "
           f".safetensors existe? {os.path.exists(probe+'.safetensors')}", flush=True)
 
-    print("[trellis] carregando pipeline da pasta local...", flush=True)
+    # O base.py do TRELLIS resolve sub-checkpoints "ckpts/..." por caminho
+    # RELATIVO ao working dir (não ao local_dir). Os arquivos estão em
+    # {local_dir}/ckpts/...; então entramos no local_dir antes do from_pretrained
+    # para que os paths relativos resolvam corretamente e não caiam no fallback
+    # remoto (que tenta huggingface.co/ckpts/... e dá 401).
+    print(f"[trellis] chdir para {local_dir} e carregando pipeline...", flush=True)
+    os.chdir(local_dir)
     t1 = time.monotonic()
     pipe = Trellis2ImageTo3DPipeline.from_pretrained(local_dir)
     pipe.cuda()
