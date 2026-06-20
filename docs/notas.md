@@ -96,3 +96,26 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 ### Convenção de cache (mantida): HF_HOME=/runpod-volume/hf-cache
 - Validação de persistência (1ª baixa / 2ª reaproveita) será feita na Fase 3
   com o FLUX, observando a diferença de tempo entre cold starts.
+
+---
+
+## Fase 3 — FLUX.1-schnell (texto -> imagem)
+
+- `docker/flux_only/`: Dockerfile (base `pytorch/pytorch:2.4.1-cuda12.1-...`),
+  handler com `FluxPipeline`, sufixo de prompt (objeto isolado/fundo limpo),
+  `test_flux.py` (cliente de teste que salva PNG; o client.py oficial exige .glb).
+- ⚠️ **FLUX.1-schnell é GATED** (`gated: auto` na API do HF). Precisa:
+  1. aceitar termos em huggingface.co/black-forest-labs/FLUX.1-schnell;
+  2. token Read do HF, passado como env var **HF_TOKEN** (Secret) no endpoint.
+- **SEGURANÇA:** token NUNCA vai no código/repo — só env var Secret no RunPod.
+  (Um token exposto deve ser revogado e regenerado no HF.)
+
+### Config do endpoint (GPU)
+- Dockerfile path `docker/flux_only/Dockerfile`, build context `docker/flux_only`.
+- GPU 24 GB (schnell roda bem), volume `3d-models` (US-WA-1) em /runpod-volume,
+  Execution timeout 600s, container disk ~20 GB, env var HF_TOKEN (Secret).
+
+### Pendente
+- [ ] Criar endpoint GPU, anexar volume + HF_TOKEN.
+- [ ] Testar 2-3 prompts; conferir imagens (objeto isolado, fundo limpo).
+- [ ] Observar cache: 1º cold start baixa ~24 GB; 2º bem mais rápido.
