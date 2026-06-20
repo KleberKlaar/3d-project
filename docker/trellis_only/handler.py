@@ -82,6 +82,28 @@ def handler(event):
     print("[trellis] handler iniciado", flush=True)
     try:
         job_input = event.get("input") or {}
+
+        # Modo debug: baixa o snapshot e RETORNA no output o que há no disco,
+        # sem rodar a pipeline. Evita ter que caçar logs do worker.
+        if job_input.get("debug"):
+            from huggingface_hub import snapshot_download
+
+            local_dir = snapshot_download(MODEL_ID)
+            ck = os.path.join(local_dir, "ckpts")
+            listagem = {}
+            if os.path.isdir(ck):
+                for nome in sorted(os.listdir(ck)):
+                    listagem[nome] = os.path.getsize(os.path.join(ck, nome))
+            probe = os.path.join(ck, "shape_dec_next_dc_f16c32_fp16")
+            return {
+                "local_dir": local_dir,
+                "ckpts_existe": os.path.isdir(ck),
+                "ckpts_arquivos": listagem,
+                "probe_json": os.path.exists(probe + ".json"),
+                "probe_safetensors": os.path.exists(probe + ".safetensors"),
+                "raiz": sorted(os.listdir(local_dir)),
+            }
+
         image_b64 = job_input.get("image_base64")
         if not image_b64:
             return {"error": "input sem image_base64"}
