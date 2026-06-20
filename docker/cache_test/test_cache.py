@@ -40,23 +40,35 @@ def main() -> None:
     if not ENDPOINT_ID:
         sys.exit("[erro] passe o endpoint id como argumento ou defina CACHE_ENDPOINT_ID.")
 
-    url = f"https://api.runpod.ai/v2/{ENDPOINT_ID}/runsync"
+    base = f"https://api.runpod.ai/v2/{ENDPOINT_ID}"
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
-    print(f"[teste] chamando {ENDPOINT_ID} (runsync)...")
+    # Usa /run (assíncrono) + polling em vez de /runsync. O cold start aqui pode
+    # passar de 60s (delayTime alto), o que estoura a conexão síncrona do /runsync.
+    # Polling espera o tempo que for preciso.
+    print(f"[teste] enviando job para {ENDPOINT_ID} (/run)...")
     t0 = time.monotonic()
-    # /runsync espera o job terminar e já devolve o output. Timeout alto por causa
-    # do cold start na primeira chamada.
-    resp = requests.post(url, json={"input": {}}, headers=headers, timeout=600)
-    dt = time.monotonic() - t0
+    r = requests.post(f"{base}/run", json={"input": {}}, headers=headers, timeout=30)
+    if r.status_code != 200:
+        sys.exit(f"[erro] HTTP {r.status_code} no /run: {r.text}")
+    job_id = r.json()["id"]
+    print(f"[teste] job aceito. id={job_id}")
 
-    if resp.status_code != 200:
-        sys.exit(f"[erro] HTTP {resp.status_code}: {resp.text}")
+    # Polling do status até COMPLETED/FAILED.
+    while True:
+        s = requests.get(f"{base}/status/{job_id}", headers=headers, timeout=30)
+        if s.status_code != 200:
+            sys.exit(f"[erro] HTTP {s.status_code} no /status: {s.text}")
+        data = s.json()
+        status = data.get("status")
+        dt = time.monotonic() - t0
+        print(f"[teste] status: {status}  (t+{dt:.0f}s)")
+        if status in ("COMPLETED", "FAILED", "CANCELLED", "TIMED_OUT"):
+            break
+        time.sleep(3)
 
-    data = resp.json()
+    print(f"[teste] tempo total (com cold start): {dt:.1f}s")
     output = data.get("output", data)
-    print(f"[teste] tempo total da chamada (com cold start): {dt:.1f}s")
-    print("[teste] status:", data.get("status"))
     print("[teste] output:")
     print(json.dumps(output, indent=2, ensure_ascii=False))
 
