@@ -119,10 +119,23 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - Dependências verificadas (existem com tags certas): nvdiffrast v0.4.0,
   nvdiffrec@renderutils, CuMesh, FlexGEMM, o-voxel dentro do TRELLIS.2.
 
+### Andamento
+- Reorganizado em 2 endpoints separados (limpeza da confusão):
+  - **3d-flux** `s2vqihw0zdngt8` (Ampere 24/48) — VALIDADO ✅ (gerou gato2.png).
+  - **3d-trellis** `68liwt3j75q6jj` (Ampere 48).
+  - Volume NOVO **3d-store** `dhxlnwr3dy` (100 GB, EU-SE-1) usado pelos dois.
+    (EU-SE-1 desta vez TEM capacidade — FLUX rodou normal.)
+  - 1 repo GitHub só serve os dois endpoints (paths diferentes). NÃO precisa
+    de repos separados.
+- Build do TRELLIS (6 extensões CUDA) compilou OK (Completed) — maior risco
+  do projeto, superado.
+- Bug encontrado: `ModuleNotFoundError: trellis2`. Causa: trellis2 não é pacote
+  pip, é subpasta do repo; example.py roda da raiz. Fix: PYTHONPATH=/opt/
+  TRELLIS.2 + WORKDIR lá. (commit 'fix(trellis): PYTHONPATH...') -> rebuild.
+
 ### Pendente
-- [ ] Criar endpoint GPU (48 GB, build context RAIZ), anexar volume.
-- [ ] Build pode estourar tempo — acompanhar logs; corrigir extensão que falhar.
-- [ ] Testar com as imagens da Fase 3 (gato/cadeira/vaso) -> abrir .glb e validar.
+- [ ] Aguardar rebuild do TRELLIS (fix PYTHONPATH) ficar Completed.
+- [ ] Testar gato.png -> .glb; abrir no gltf-viewer/Blender e validar geometria.
 
 ---
 
