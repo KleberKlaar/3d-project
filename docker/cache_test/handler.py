@@ -80,22 +80,37 @@ def handler(event):
         print("[cache-test] modo PROBE (sem download)", flush=True)
         return _diagnostico_volume()
     try:
-        # Import tardio: só depois de HF_HOME já estar no ambiente (ENV do Docker).
-        from huggingface_hub import snapshot_download
-
         cache_root = _cache_dir()
         print(f"[cache-test] HF_HOME efetivo: {cache_root}", flush=True)
 
         volume_montado = os.path.isdir("/runpod-volume")
         print(f"[cache-test] /runpod-volume montado? {volume_montado}", flush=True)
 
+        # PASSO 1: testar acesso de saída à internet ANTES de tocar no HF.
+        # Se o worker não tiver rede de saída, qualquer download pendura.
+        print("[cache-test] testando conectividade (HEAD huggingface.co)...", flush=True)
+        import urllib.request
+
+        tc = time.monotonic()
+        try:
+            req = urllib.request.Request("https://huggingface.co", method="HEAD")
+            urllib.request.urlopen(req, timeout=15)
+            print(f"[cache-test] conectividade OK em {time.monotonic()-tc:.2f}s", flush=True)
+        except Exception as net:  # noqa: BLE001
+            print(f"[cache-test] SEM CONECTIVIDADE: {net}", flush=True)
+            return {"error": f"sem rede de saida: {type(net).__name__}: {net}"}
+
+        # PASSO 2: import e download de UM arquivo minúsculo (não o repo inteiro).
+        from huggingface_hub import hf_hub_download
+
         antes = _repo_ja_em_cache(cache_root, TEST_REPO)
         print(f"[cache-test] repo já em cache antes do download? {antes}", flush=True)
 
+        print("[cache-test] baixando config.json...", flush=True)
         t0 = time.monotonic()
-        caminho = snapshot_download(repo_id=TEST_REPO)
+        caminho = hf_hub_download(repo_id=TEST_REPO, filename="config.json")
         dt = time.monotonic() - t0
-        print(f"[cache-test] snapshot_download levou {dt:.2f}s -> {caminho}", flush=True)
+        print(f"[cache-test] download levou {dt:.2f}s -> {caminho}", flush=True)
 
         return {
             "hf_home": cache_root,
