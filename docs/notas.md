@@ -81,5 +81,18 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - Teste local: `py docker/cache_test/test_cache.py 7mpkwd0asefeoc`
   (HTTP puro via /runsync; não usa o client.py).
 
-### Pendente
-- [ ] Rodar 2x: 1ª `cache_hit=false` (baixa). 2ª `cache_hit=true` (mais rápida).
+### Resultado — infra VALIDADA, cache será provado na Fase 3 ✅
+- Tudo da infra provado funcionando no endpoint `fium5h1j1z3jdn` (US-WA-1):
+  - volume monta em /runpod-volume, gravável (`write_seconds≈0.004`);
+  - rede de saída OK (DNS + HTTPS huggingface.co em ~0.02s — nettest);
+  - executionTimeout=600s confirmado via API; worker sobe e responde.
+- O modelo de teste `hf-internal-testing/tiny-random-bert` TRAVAVA o
+  `hf_hub_download`/`snapshot_download` sempre em ~38s (modelo de teste bugado,
+  não é a nossa infra). Decisão do usuário: não perder mais tempo com modelo
+  de mentira — validar o cache direto com FLUX real na Fase 3.
+- Volume LIMPO antes da Fase 3: modo `storage+clean` removeu `hf-cache`,
+  `itens_raiz: []`. Volume de 100 GB vazio e pronto para FLUX (~24 GB)+TRELLIS.
+
+### Convenção de cache (mantida): HF_HOME=/runpod-volume/hf-cache
+- Validação de persistência (1ª baixa / 2ª reaproveita) será feita na Fase 3
+  com o FLUX, observando a diferença de tempo entre cold starts.
