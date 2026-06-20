@@ -17,8 +17,16 @@ ENV PYTHONUNBUFFERED=1
 ENV HF_HOME=/runpod-volume/hf-cache
 ENV HF_HUB_DISABLE_TELEMETRY=1
 ENV HF_HUB_ENABLE_HF_TRANSFER=0
+# Não tentar usar flash-attention (removido abaixo); usa SDPA padrão do torch.
+ENV DIFFUSERS_DISABLE_FLASH_ATTN=1
 
 WORKDIR /app
+
+# A imagem base traz um flash_attn cuja assinatura (pack_gqa/sm_margin/softcap)
+# o torch.library.infer_schema rejeita ao importar o diffusers, quebrando o FLUX.
+# O FLUX.1-schnell NÃO precisa de flash_attn (usa atenção padrão do PyTorch).
+# Removemos para evitar o conflito de import.
+RUN pip uninstall -y flash-attn flash_attn || true
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
