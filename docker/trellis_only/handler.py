@@ -40,13 +40,24 @@ def _get_pipe():
     global _PIPE
     if _PIPE is not None:
         return _PIPE
+    from huggingface_hub import snapshot_download
     from trellis2.pipelines import Trellis2ImageTo3DPipeline
 
-    print(f"[trellis] carregando {MODEL_ID} (HF_HOME={os.environ.get('HF_HOME')})...", flush=True)
+    # IMPORTANTE: o from_pretrained do TRELLIS.2 resolve os sub-checkpoints
+    # (ckpts/...) por caminho RELATIVO ao `path`. Se passarmos o repo_id remoto,
+    # o fallback tenta baixar "ckpts/..." como se fosse um repo HF separado e dá
+    # 401. A solução é baixar o repo INTEIRO para uma pasta local (no volume) e
+    # passar essa pasta — aí o is_local=True resolve os ckpts corretamente.
+    print(f"[trellis] baixando snapshot de {MODEL_ID} para o volume...", flush=True)
     t0 = time.monotonic()
-    pipe = Trellis2ImageTo3DPipeline.from_pretrained(MODEL_ID)
+    local_dir = snapshot_download(MODEL_ID)
+    print(f"[trellis] snapshot em {local_dir} ({time.monotonic()-t0:.1f}s)", flush=True)
+
+    print("[trellis] carregando pipeline da pasta local...", flush=True)
+    t1 = time.monotonic()
+    pipe = Trellis2ImageTo3DPipeline.from_pretrained(local_dir)
     pipe.cuda()
-    print(f"[trellis] pipeline pronto em {time.monotonic()-t0:.1f}s", flush=True)
+    print(f"[trellis] pipeline pronto em {time.monotonic()-t1:.1f}s", flush=True)
     _PIPE = pipe
     return _PIPE
 
