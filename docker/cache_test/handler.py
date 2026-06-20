@@ -42,23 +42,25 @@ def _repo_ja_em_cache(cache_root: str, repo_id: str) -> bool:
 
 
 def handler(event):
+    # flush=True em TODO print: se o job for morto (timeout), o log já saiu.
+    print("[cache-test] handler iniciado", flush=True)
     try:
         # Import tardio: só depois de HF_HOME já estar no ambiente (ENV do Docker).
         from huggingface_hub import snapshot_download
 
         cache_root = _cache_dir()
-        print(f"[cache-test] HF_HOME efetivo: {cache_root}")
+        print(f"[cache-test] HF_HOME efetivo: {cache_root}", flush=True)
 
         volume_montado = os.path.isdir("/runpod-volume")
-        print(f"[cache-test] /runpod-volume montado? {volume_montado}")
+        print(f"[cache-test] /runpod-volume montado? {volume_montado}", flush=True)
 
         antes = _repo_ja_em_cache(cache_root, TEST_REPO)
-        print(f"[cache-test] repo já em cache antes do download? {antes}")
+        print(f"[cache-test] repo já em cache antes do download? {antes}", flush=True)
 
         t0 = time.monotonic()
         caminho = snapshot_download(repo_id=TEST_REPO)
         dt = time.monotonic() - t0
-        print(f"[cache-test] snapshot_download levou {dt:.2f}s -> {caminho}")
+        print(f"[cache-test] snapshot_download levou {dt:.2f}s -> {caminho}", flush=True)
 
         return {
             "hf_home": cache_root,
@@ -69,7 +71,7 @@ def handler(event):
             "repo": TEST_REPO,
         }
     except Exception as exc:  # noqa: BLE001 — nunca derrubar o worker sem responder.
-        print("[cache-test] ERRO:", exc)
+        print("[cache-test] ERRO:", exc, flush=True)
         traceback.print_exc()
         return {"error": f"{type(exc).__name__}: {exc}"}
 
