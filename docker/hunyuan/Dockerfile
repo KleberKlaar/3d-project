@@ -44,7 +44,11 @@ RUN git clone https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1.git /opt/Hunyuan3
 WORKDIR /opt/Hunyuan3D-2.1
 
 # --- Dependências Python -----------------------------------------------------
-RUN pip install --no-cache-dir -r requirements.txt
+# Remove 'bpy' (Blender como módulo) do requirements: a versão pinada (bpy==4.0)
+# não existe para Python 3.10 no PyPI e trava o build. bpy é usado só por
+# utilitários de render que não estão no caminho de export GLB (trimesh/pygltflib).
+RUN sed -i '/^bpy/d' requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt
 
 # --- Extensão 1: custom_rasterizer (CUDA) ------------------------------------
 RUN cd hy3dpaint/custom_rasterizer \
