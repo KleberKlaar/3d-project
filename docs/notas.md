@@ -143,9 +143,21 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
    Precisa: (a) aceitar termos do DINOv3 no HF; (b) HF_TOKEN no endpoint TRELLIS
    (o token do FLUX serve se a conta aceitou o DINOv3).
 
+### Bugs do TRELLIS (sequência completa até gerar)
+1. trellis2 não encontrado → PYTHONPATH=/opt/TRELLIS.2 + WORKDIR.
+2. 401 ckpts/... → snapshot_download local + os.chdir(local_dir).
+3. DINOv3 gated → aceitar termos + HF_TOKEN no endpoint (mesmo token do FLUX).
+4. RMBG-2.0 gated → aceitar termos (gated:auto, instantâneo).
+5. DINOv3 'no attribute layer' → transformers antigo. Fixar transformers==4.57.1.
+6. nvdiffrast/nvdiffrec/flexgemm sumiram → eu tinha posto --depth 1 nos clones;
+   o nvdiffrast deriva o NOME do pacote do histórico git -> com clone raso vira
+   "UNKNOWN-0.0.0" e import falha. LIÇÃO: NÃO usar --depth 1 nessas extensões.
+   Voltou a clone completo. Verificações `python -c import X` no build pegam isso.
+
 ### Pendente
-- [ ] Aceitar DINOv3 no HF + adicionar HF_TOKEN ao endpoint 3d-trellis.
+- [ ] Build (clone completo, com verificações de import) ficar Completed.
 - [ ] Testar gato.png -> .glb; abrir no gltf-viewer/Blender e validar geometria.
+  (Na última tentativa o pipeline rodou 437s — só faltava nvdiffrast no fim.)
 
 ---
 
