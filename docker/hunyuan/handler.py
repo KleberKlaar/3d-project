@@ -48,29 +48,10 @@ _SHAPE = None
 _PAINT = None
 
 
-def _setup_runtime():
-    """Compila as extensões CUDA + baixa RealESRGAN na 1ª execução (não no build)."""
-    import subprocess
-
-    print("[hunyuan] rodando setup_runtime.sh (1a execucao)...", flush=True)
-    t0 = time.monotonic()
-    r = subprocess.run(
-        ["bash", os.path.join(REPO, "setup_runtime.sh")],
-        capture_output=True, text=True,
-    )
-    print(r.stdout, flush=True)
-    if r.returncode != 0:
-        print("[hunyuan] setup_runtime STDERR:", r.stderr, flush=True)
-        raise RuntimeError(f"setup_runtime falhou: {r.stderr[-500:]}")
-    print(f"[hunyuan] setup_runtime ok em {time.monotonic()-t0:.1f}s", flush=True)
-
-
 def _get_pipelines():
     global _SHAPE, _PAINT
     if _SHAPE is not None:
         return _SHAPE, _PAINT
-
-    _setup_runtime()
 
     # torchvision_fix: o repo traz um patch de compatibilidade (ver demo.py).
     try:

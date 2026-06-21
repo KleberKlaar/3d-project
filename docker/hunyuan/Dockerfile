@@ -1,13 +1,13 @@
 # Worker HUNYUAN (Fase 4) — imagem -> 3D (.glb texturizado), COM GPU/CUDA.
 #
-# Baseado no Dockerfile oficial da Tencent, mas SEM conda (Python do sistema) e
-# enxuto para caber nos limites de build do RunPod (docker build <=30min, imagem
-# <=80GB). Compila só 2 extensões nativas (vs 6 do TRELLIS): custom_rasterizer
-# (CUDA) e DifferentiableRenderer (c++/pybind11, leve).
+# Baseado no Dockerfile oficial da Tencent, mas SEM conda (Python do sistema).
+# Compila 2 extensões nativas: custom_rasterizer (CUDA) e DifferentiableRenderer.
 #
-# No endpoint RunPod (integração GitHub), Advanced settings:
-#   Dockerfile path: docker/hunyuan/Dockerfile
-#   Build context:   .            (RAIZ do repo — clonamos o Hunyuan aqui dentro)
+# ESTRATÉGIA DE BUILD: esta imagem é construída via GitHub Actions (.github/
+# workflows/build-hunyuan.yml) e publicada no GHCR, porque o requirements pesado
+# do Hunyuan estoura o limite de 30min do build GitHub-nativo do RunPod. No
+# RunPod usamos "Deploy from a Docker image" apontando para a imagem publicada
+# (ghcr.io/kleberklaar/3d-hunyuan), que só é baixada — sem build, sem limite.
 # Anexar o Network Volume (3d-store) em /runpod-volume. GPU >= 29 GB (48 ok).
 
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
@@ -53,12 +53,20 @@ RUN sed -i '/^bpy/d' requirements.txt \
 # runpod (instalado no build; leve).
 RUN pip install --no-cache-dir runpod>=1.6
 
-# IMPORTANTE: as 2 extensões CUDA (custom_rasterizer, DifferentiableRenderer) e o
-# download do RealESRGAN NÃO são feitos no build — o `docker build` do RunPod tem
-# limite de 30min e o requirements sozinho já leva ~20min. Em vez disso, o script
-# setup_runtime.sh compila/baixa tudo na PRIMEIRA execução do worker e cacheia o
-# resultado no Network Volume (/runpod-volume/hunyuan-ext), reaproveitado depois.
-COPY docker/hunyuan/setup_runtime.sh /opt/Hunyuan3D-2.1/setup_runtime.sh
+# --- Extensão 1: custom_rasterizer (CUDA) ------------------------------------
+# --no-build-isolation: o setup.py importa torch (que está no ambiente).
+RUN cd hy3dpaint/custom_rasterizer \
+    && CUDA_NVCC_FLAGS="-allow-unsupported-compiler" pip install --no-cache-dir . --no-build-isolation \
+    && python -c "import custom_rasterizer; print('custom_rasterizer OK')"
+
+# --- Extensão 2: DifferentiableRenderer (c++/pybind11) -----------------------
+RUN cd hy3dpaint/DifferentiableRenderer && bash compile_mesh_painter.sh \
+    && ls mesh_inpaint_processor*.so
+
+# --- RealESRGAN (upscaler usado na textura) ----------------------------------
+RUN mkdir -p hy3dpaint/ckpt \
+    && wget -q https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth \
+        -P hy3dpaint/ckpt
 
 # --- Código do worker --------------------------------------------------------
 COPY docker/hunyuan/handler.py /opt/Hunyuan3D-2.1/handler.py
