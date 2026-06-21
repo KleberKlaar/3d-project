@@ -65,23 +65,30 @@ RUN pip install --no-cache-dir "transformers==4.57.1"
 RUN pip install --no-cache-dir flash-attn==2.7.3 --no-build-isolation
 
 # --- setup.sh --nvdiffrast ---------------------------------------------------
+# nvdiffrast é "puro python" no install (compila o plugin CUDA on-demand em
+# runtime). O `import nvdiffrast.torch` ao final ABORTA o build se não instalou.
 RUN git clone -b v0.4.0 https://github.com/NVlabs/nvdiffrast.git /tmp/ext/nvdiffrast \
-    && pip install --no-cache-dir /tmp/ext/nvdiffrast --no-build-isolation
+    && pip install --no-cache-dir /tmp/ext/nvdiffrast --no-build-isolation \
+    && python -c "import nvdiffrast.torch; print('nvdiffrast OK')"
 
 # --- setup.sh --nvdiffrec ----------------------------------------------------
 RUN git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/ext/nvdiffrec \
-    && pip install --no-cache-dir /tmp/ext/nvdiffrec --no-build-isolation
+    && pip install --no-cache-dir /tmp/ext/nvdiffrec --no-build-isolation \
+    && python -c "import nvdiffrec; print('nvdiffrec OK')"
 
 # --- setup.sh --cumesh -------------------------------------------------------
 RUN git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/ext/CuMesh --recursive \
-    && pip install --no-cache-dir /tmp/ext/CuMesh --no-build-isolation
+    && pip install --no-cache-dir /tmp/ext/CuMesh --no-build-isolation \
+    && python -c "import cumesh; print('cumesh OK')"
 
 # --- setup.sh --flexgemm -----------------------------------------------------
 RUN git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/ext/FlexGEMM --recursive \
-    && pip install --no-cache-dir /tmp/ext/FlexGEMM --no-build-isolation
+    && pip install --no-cache-dir /tmp/ext/FlexGEMM --no-build-isolation \
+    && python -c "import flexgemm; print('flexgemm OK')"
 
 # --- setup.sh --o-voxel (vem dentro do próprio repo TRELLIS.2) ---------------
-RUN pip install --no-cache-dir /opt/TRELLIS.2/o-voxel --no-build-isolation
+RUN pip install --no-cache-dir /opt/TRELLIS.2/o-voxel --no-build-isolation \
+    && python -c "import o_voxel; print('o_voxel OK')"
 
 # runpod por último (camada barata, muda pouco).
 RUN pip install --no-cache-dir runpod>=1.6
