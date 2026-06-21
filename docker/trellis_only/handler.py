@@ -89,6 +89,18 @@ def handler(event):
     try:
         job_input = event.get("input") or {}
 
+        # Modo imports: testa se as 6 extensões CUDA importam (retorna no output).
+        if job_input.get("imports"):
+            resultado = {}
+            for mod in ("nvdiffrast", "nvdiffrast.torch", "nvdiffrec", "cumesh",
+                        "flexgemm", "o_voxel", "flash_attn", "trellis2", "transformers"):
+                try:
+                    m = __import__(mod)
+                    resultado[mod] = getattr(m, "__version__", "ok")
+                except Exception as e:  # noqa: BLE001
+                    resultado[mod] = f"FALHA: {type(e).__name__}: {e}"
+            return {"imports": resultado}
+
         # Modo debug: baixa o snapshot e RETORNA no output o que há no disco,
         # sem rodar a pipeline. Evita ter que caçar logs do worker.
         if job_input.get("debug"):
