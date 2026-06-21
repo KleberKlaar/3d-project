@@ -154,10 +154,29 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
    "UNKNOWN-0.0.0" e import falha. LIÇÃO: NÃO usar --depth 1 nessas extensões.
    Voltou a clone completo. Verificações `python -c import X` no build pegam isso.
 
-### Pendente
-- [ ] Build (clone completo, com verificações de import) ficar Completed.
-- [ ] Testar gato.png -> .glb; abrir no gltf-viewer/Blender e validar geometria.
-  (Na última tentativa o pipeline rodou 437s — só faltava nvdiffrast no fim.)
+### DECISÃO: TRELLIS abandonado, trocado por Hunyuan3D 2.1
+- Motivo: o build GitHub do RunPod NÃO suporta bem compilar libs CUDA. Doc
+  oficial: docker build deve completar em 30min e imagem <=80GB. O TRELLIS
+  compila 6 extensões (>30min) e os builds passaram a falhar logo no início
+  ("Creating cache directory" + Failed em ~12s), inclusive em endpoint novo e
+  com commit que só mexia em docs. Não era nosso código — é limite da plataforma.
+- TRELLIS chegou a rodar 437s de inferência real (todos os bugs de código
+  resolvidos); só o build travou. Lição registrada.
+- Hunyuan3D 2.1 (tencent/Hunyuan3D-2.1): SEM modelos gated, melhor textura PBR,
+  29 GB VRAM (cabe na de 48). API simples: Hunyuan3DDiTFlowMatchingPipeline
+  (shape) -> mesh.export('.glb'); Hunyuan3DPaintPipeline (textura PBR).
+  BackgroundRemover embutido (sem RMBG gated).
+- ⚠️ Dockerfile oficial da Tencent: build >1h e imagem >70GB (estoura limites
+  do RunPod). Estratégia: build LEVE (sem compilar) + compilar as 2 extensões
+  (custom_rasterizer, DifferentiableRenderer) em RUNTIME, cacheadas no volume.
+
+### Limpeza do volume (para abrir espaço ao Hunyuan)
+- Apagados do hf-cache: TRELLIS.2-4B (32.5GB), TRELLIS-image-large, DINOv3, RMBG.
+- Mantido: FLUX.1-schnell (67.45 GB). Liberou ~37 GB.
+
+### Pendente — Fase 4 com Hunyuan3D 2.1
+- [ ] Worker docker/trellis_only -> renomear/criar para hunyuan. Build runtime.
+- [ ] Endpoint GPU 48GB, volume 3d-store. Testar gato.png -> .glb texturizado.
 
 ---
 
