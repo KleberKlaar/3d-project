@@ -238,10 +238,20 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
   tag :latest -> forcar redeploy (saveEndpoint via API ou refresh no painel)
   para o worker pegar a imagem nova.
 
+### FASE 4 — PIPELINE FUNCIONANDO ✅ (imagem -> 3D texturizado)
+- gato.png -> Hunyuan3D 2.1 -> saidas/gato_final.glb (1131 KB).
+- GLB VÁLIDO (magic 'glTF'): 1 mesh, material PBR (pbrMetallicRoughness),
+  1 textura embutida. Geração ~881s (cold start + shape + textura PBR).
+- Último fix: paint do Hunyuan exporta OBJ+MTL+textura, não GLB. Handler
+  converte com trimesh.load + export glb (textura embutida).
+- Endpoint: 506zjm84ak8h4d (Deploy from Docker image kklaar/3d-hunyuan,
+  AMPERE_48, volume 3d-store). Imagem buildada LOCAL + push Docker Hub.
+- ⚠️ Para atualizar a imagem: rebuild local -> push (wsl --shutdown antes p/
+  DNS) -> saveEndpoint via API forca redeploy -> testar.
+
 ### Pendente
-- [ ] Rebuild+push com fix do custom_pipeline; retestar gato -> .glb texturizado.
-- [ ] Abrir o .glb e validar geometria + textura.
-- [ ] LIMPEZA: docker rmi + system prune (~54GB).
+- [ ] Usuário validar gato_final.glb no gltf-viewer (geometria + textura).
+- [ ] LIMPEZA: deletar docker_data.vhdx ou docker system prune (~33GB imagem).
 
 ---
 

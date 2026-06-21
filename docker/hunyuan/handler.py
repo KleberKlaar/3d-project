@@ -112,10 +112,19 @@ def _get_pipelines():
     print("[hunyuan] carregando paint pipeline (textura PBR)...", flush=True)
     t1 = time.monotonic()
     _preparar_custom_pipeline_cache()
-    conf = Hunyuan3DPaintConfig(max_num_view=6, resolution=512)
+    # Qualidade da textura (configurável por env var no endpoint). Defaults ALTOS
+    # para melhor textura: 9 views (máx) e resolução 768 (vs 6/512 antes).
+    # GPU 48GB comporta. texture_size = mapa UV final.
+    num_view = int(os.environ.get("HY_NUM_VIEW", "9"))       # 6..9
+    resolution = int(os.environ.get("HY_RESOLUTION", "768"))  # 512 ou 768
+    tex_size = int(os.environ.get("HY_TEXTURE_SIZE", "4096"))  # mapa final
+    print(f"[hunyuan] paint config: views={num_view} resolution={resolution} "
+          f"texture_size={tex_size}", flush=True)
+    conf = Hunyuan3DPaintConfig(max_num_view=num_view, resolution=resolution)
     conf.realesrgan_ckpt_path = os.path.join(REPO, "hy3dpaint/ckpt/RealESRGAN_x4plus.pth")
     conf.multiview_cfg_path = os.path.join(REPO, "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml")
     conf.custom_pipeline = os.path.join(REPO, "hy3dpaint/hunyuanpaintpbr")
+    conf.texture_size = tex_size
     _PAINT = Hunyuan3DPaintPipeline(conf)
     print(f"[hunyuan] paint pronto em {time.monotonic()-t1:.1f}s", flush=True)
     return _SHAPE, _PAINT
