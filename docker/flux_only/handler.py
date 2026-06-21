@@ -69,6 +69,52 @@ def handler(event):
     print("[flux] handler iniciado", flush=True)
     try:
         job_input = event.get("input") or {}
+
+        # Modo diskinfo: mede o espaço do /runpod-volume e lista o que ocupa.
+        # Com clean_buildcache=true, REMOVE o cache de build do Docker que o
+        # RunPod acumula em /runpod-volume/registry.runpod.net (enche o volume
+        # e faz os builds falharem logo no início).
+        if job_input.get("diskinfo"):
+            import shutil
+
+            root = "/runpod-volume"
+            info = {}
+            try:
+                st = shutil.disk_usage(root)
+                info["total_gb"] = round(st.total / 1e9, 2)
+                info["used_gb"] = round(st.used / 1e9, 2)
+                info["free_gb"] = round(st.free / 1e9, 2)
+            except Exception as e:  # noqa: BLE001
+                info["disk_usage_erro"] = str(e)
+            # Tamanho dos itens de topo.
+            tops = {}
+            for nome in sorted(os.listdir(root)):
+                p = os.path.join(root, nome)
+                total = 0
+                for dp, _, fs in os.walk(p):
+                    for f in fs:
+                        try:
+                            total += os.path.getsize(os.path.join(dp, f))
+                        except OSError:
+                            pass
+                tops[nome] = round(total / 1e9, 2)
+            info["itens_gb"] = tops
+
+            if job_input.get("clean_buildcache"):
+                cache = os.path.join(root, "registry.runpod.net")
+                if os.path.isdir(cache):
+                    shutil.rmtree(cache, ignore_errors=True)
+                    info["cache_removido"] = True
+                else:
+                    info["cache_removido"] = "pasta não existia"
+                # remede após limpar
+                try:
+                    st = shutil.disk_usage(root)
+                    info["free_gb_apos"] = round(st.free / 1e9, 2)
+                except Exception:  # noqa: BLE001
+                    pass
+            return info
+
         prompt = (job_input.get("prompt") or "").strip()
         if not prompt:
             return {"error": "prompt vazio"}
