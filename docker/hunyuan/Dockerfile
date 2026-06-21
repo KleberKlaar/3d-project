@@ -50,23 +50,15 @@ WORKDIR /opt/Hunyuan3D-2.1
 RUN sed -i '/^bpy/d' requirements.txt \
     && pip install --no-cache-dir -r requirements.txt
 
-# --- Extensão 1: custom_rasterizer (CUDA) ------------------------------------
-RUN cd hy3dpaint/custom_rasterizer \
-    && CUDA_NVCC_FLAGS="-allow-unsupported-compiler" pip install --no-cache-dir -e . \
-    && python -c "import custom_rasterizer; print('custom_rasterizer OK')"
-
-# --- Extensão 2: DifferentiableRenderer (c++/pybind11, leve) -----------------
-# Compila o .so e verifica que o arquivo foi gerado (aborta o build se falhar).
-RUN cd hy3dpaint/DifferentiableRenderer && bash compile_mesh_painter.sh \
-    && ls mesh_inpaint_processor*.so
-
-# --- RealESRGAN (upscaler usado na textura) ----------------------------------
-RUN mkdir -p hy3dpaint/ckpt \
-    && wget -q https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth \
-        -P hy3dpaint/ckpt
-
-# runpod por último.
+# runpod (instalado no build; leve).
 RUN pip install --no-cache-dir runpod>=1.6
+
+# IMPORTANTE: as 2 extensões CUDA (custom_rasterizer, DifferentiableRenderer) e o
+# download do RealESRGAN NÃO são feitos no build — o `docker build` do RunPod tem
+# limite de 30min e o requirements sozinho já leva ~20min. Em vez disso, o script
+# setup_runtime.sh compila/baixa tudo na PRIMEIRA execução do worker e cacheia o
+# resultado no Network Volume (/runpod-volume/hunyuan-ext), reaproveitado depois.
+COPY docker/hunyuan/setup_runtime.sh /opt/Hunyuan3D-2.1/setup_runtime.sh
 
 # --- Código do worker --------------------------------------------------------
 COPY docker/hunyuan/handler.py /opt/Hunyuan3D-2.1/handler.py
