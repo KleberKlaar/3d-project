@@ -58,6 +58,36 @@ _SHAPE = None
 _PAINT = None
 
 
+def _preparar_custom_pipeline_cache():
+    """
+    O diffusers carrega o custom_pipeline 'hunyuanpaintpbr' copiando só o
+    pipeline.py para ~/.cache/.../diffusers_modules/local/. Mas o pipeline.py faz
+    `from .unet.modules import ...`, e a pasta unet/ NÃO é copiada -> erro
+    'No module named diffusers_modules.local.modules'. Copiamos a pasta inteira
+    para o cache de modules do diffusers para resolver os imports relativos.
+    """
+    import shutil
+
+    src = os.path.join(REPO, "hy3dpaint", "hunyuanpaintpbr")
+    hf_modules = os.path.join(
+        os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface")),
+        "modules", "diffusers_modules", "local",
+    )
+    os.makedirs(hf_modules, exist_ok=True)
+    # Copia o conteúdo de hunyuanpaintpbr/ (pipeline.py, unet/, __init__.py) para
+    # o diretório 'local' do diffusers, preservando a estrutura de submódulos.
+    for nome in os.listdir(src):
+        s = os.path.join(src, nome)
+        d = os.path.join(hf_modules, nome)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, dirs_exist_ok=True)
+        else:
+            shutil.copy2(s, d)
+    # Garante __init__.py na cadeia para imports funcionarem.
+    open(os.path.join(hf_modules, "__init__.py"), "a").close()
+    print(f"[hunyuan] custom_pipeline cache preparado em {hf_modules}", flush=True)
+
+
 def _get_pipelines():
     global _SHAPE, _PAINT
     if _SHAPE is not None:
@@ -81,6 +111,7 @@ def _get_pipelines():
 
     print("[hunyuan] carregando paint pipeline (textura PBR)...", flush=True)
     t1 = time.monotonic()
+    _preparar_custom_pipeline_cache()
     conf = Hunyuan3DPaintConfig(max_num_view=6, resolution=512)
     conf.realesrgan_ckpt_path = os.path.join(REPO, "hy3dpaint/ckpt/RealESRGAN_x4plus.pth")
     conf.multiview_cfg_path = os.path.join(REPO, "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml")

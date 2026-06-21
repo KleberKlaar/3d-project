@@ -206,8 +206,23 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
   AMPERE_48, volume 3d-store, timeout 600).
 - ⚠️ Imagem precisa estar PÚBLICA no Docker Hub senão o RunPod não baixa.
 
+### Bug do bpy (Blender como módulo)
+- 1º teste do gato falhou: `ModuleNotFoundError: No module named 'bpy'`.
+  Import chain: textureGenPipeline -> DifferentiableRenderer/mesh_utils.py
+  (import bpy no topo). bpy NÃO tem wheel p/ Python 3.10 (req pinava bpy==4.0
+  inexistente; só existe bpy>=4.2 e exige Python 3.11+).
+- NÃO migrar p/ Python 3.11 (quebraria torch 2.5.1 + extensões já compiladas).
+- Fix: stub de bpy (módulo vazio em sys.modules) no handler. Aposta: bpy só é
+  usado em export Blender, fora do caminho shape->paint->glb (trimesh/pygltflib).
+- ⚠️ SE o bpy for chamado de verdade na geração -> stub falha com AttributeError;
+  aí contornar a chamada específica. Próximo teste é o juiz.
+
+### LIMPEZA pendente (espaço na máquina local)
+- [ ] Ao fim: `docker rmi 3d-hunyuan kklaar/3d-hunyuan` + `docker system prune -af`
+      (libera ~54GB). Opção: migrar build p/ GitHub Actions e zerar local.
+
 ### Pendente
-- [ ] 1º teste do gato (cold start longo: baixa imagem 12GB + modelos ~30GB).
+- [ ] Rebuild+push com stub do bpy; retestar gato -> .glb.
 - [ ] Abrir o .glb texturizado e validar.
 
 ---
