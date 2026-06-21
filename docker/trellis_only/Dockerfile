@@ -44,7 +44,9 @@ RUN pip install --no-cache-dir torch==2.6.0 torchvision==0.21.0 \
 WORKDIR /opt
 
 # --- Clona o TRELLIS.2 (com submódulos) --------------------------------------
-RUN git clone -b main https://github.com/microsoft/TRELLIS.2.git --recursive /opt/TRELLIS.2
+# --depth 1 (sem histórico). O repo tem ~676 MB; remover .git depois corta MUito.
+RUN git clone -b main --depth 1 https://github.com/microsoft/TRELLIS.2.git --recursive /opt/TRELLIS.2 \
+    && rm -rf /opt/TRELLIS.2/.git
 
 WORKDIR /opt/TRELLIS.2
 
@@ -65,26 +67,30 @@ RUN pip install --no-cache-dir "transformers==4.57.1"
 RUN pip install --no-cache-dir flash-attn==2.7.3 --no-build-isolation
 
 # --- setup.sh --nvdiffrast ---------------------------------------------------
-# nvdiffrast é "puro python" no install (compila o plugin CUDA on-demand em
-# runtime). O `import nvdiffrast.torch` ao final ABORTA o build se não instalou.
-RUN git clone -b v0.4.0 https://github.com/NVlabs/nvdiffrast.git /tmp/ext/nvdiffrast \
+# --depth 1 (clone raso) + limpeza de /tmp/ext após instalar = economiza disco
+# do builder (evita falha por disco cheio). import ao final aborta se falhar.
+RUN git clone -b v0.4.0 --depth 1 https://github.com/NVlabs/nvdiffrast.git /tmp/ext/nvdiffrast \
     && pip install --no-cache-dir /tmp/ext/nvdiffrast --no-build-isolation \
-    && python -c "import nvdiffrast.torch; print('nvdiffrast OK')"
+    && python -c "import nvdiffrast.torch; print('nvdiffrast OK')" \
+    && rm -rf /tmp/ext/nvdiffrast
 
 # --- setup.sh --nvdiffrec ----------------------------------------------------
-RUN git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/ext/nvdiffrec \
+RUN git clone -b renderutils --depth 1 https://github.com/JeffreyXiang/nvdiffrec.git /tmp/ext/nvdiffrec \
     && pip install --no-cache-dir /tmp/ext/nvdiffrec --no-build-isolation \
-    && python -c "import nvdiffrec; print('nvdiffrec OK')"
+    && python -c "import nvdiffrec; print('nvdiffrec OK')" \
+    && rm -rf /tmp/ext/nvdiffrec
 
 # --- setup.sh --cumesh -------------------------------------------------------
-RUN git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/ext/CuMesh --recursive \
+RUN git clone --depth 1 https://github.com/JeffreyXiang/CuMesh.git /tmp/ext/CuMesh --recursive \
     && pip install --no-cache-dir /tmp/ext/CuMesh --no-build-isolation \
-    && python -c "import cumesh; print('cumesh OK')"
+    && python -c "import cumesh; print('cumesh OK')" \
+    && rm -rf /tmp/ext/CuMesh
 
 # --- setup.sh --flexgemm -----------------------------------------------------
-RUN git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/ext/FlexGEMM --recursive \
+RUN git clone --depth 1 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/ext/FlexGEMM --recursive \
     && pip install --no-cache-dir /tmp/ext/FlexGEMM --no-build-isolation \
-    && python -c "import flexgemm; print('flexgemm OK')"
+    && python -c "import flexgemm; print('flexgemm OK')" \
+    && rm -rf /tmp/ext/FlexGEMM
 
 # --- setup.sh --o-voxel (vem dentro do próprio repo TRELLIS.2) ---------------
 RUN pip install --no-cache-dir /opt/TRELLIS.2/o-voxel --no-build-isolation \
