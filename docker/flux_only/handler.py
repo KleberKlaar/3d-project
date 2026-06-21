@@ -107,7 +107,33 @@ def handler(event):
                     info["cache_removido"] = True
                 else:
                     info["cache_removido"] = "pasta não existia"
-                # remede após limpar
+
+            # Lista os modelos no hub do HF (cada um é models--org--nome) c/ tamanho.
+            hub = os.path.join(root, "hf-cache", "hub")
+            modelos = {}
+            if os.path.isdir(hub):
+                for nome in sorted(os.listdir(hub)):
+                    p = os.path.join(hub, nome)
+                    tot = 0
+                    for dp, _, fs in os.walk(p):
+                        for f in fs:
+                            try:
+                                tot += os.path.getsize(os.path.join(dp, f))
+                            except OSError:
+                                pass
+                    modelos[nome] = round(tot / 1e9, 2)
+            info["modelos_hub"] = modelos
+
+            # Remove modelos por nome exato (lista em remover_modelos).
+            remover = job_input.get("remover_modelos") or []
+            if remover:
+                removidos = []
+                for nome in remover:
+                    p = os.path.join(hub, nome)
+                    if os.path.isdir(p):
+                        shutil.rmtree(p, ignore_errors=True)
+                        removidos.append(nome)
+                info["removidos"] = removidos
                 try:
                     st = shutil.disk_usage(root)
                     info["free_gb_apos"] = round(st.free / 1e9, 2)
