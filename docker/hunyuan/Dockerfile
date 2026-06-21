@@ -55,12 +55,23 @@ RUN pip install --no-cache-dir runpod>=1.6
 
 # --- Extensão 1: custom_rasterizer (CUDA) ------------------------------------
 # --no-build-isolation: o setup.py importa torch (que está no ambiente).
+# NÃO verificamos o import aqui: o kernel CUDA precisa de GPU para carregar
+# (libc10.so), e não há GPU durante o docker build. A instalação basta; o import
+# funciona em runtime (no worker, com GPU).
 RUN cd hy3dpaint/custom_rasterizer \
-    && CUDA_NVCC_FLAGS="-allow-unsupported-compiler" pip install --no-cache-dir . --no-build-isolation \
-    && python -c "import custom_rasterizer; print('custom_rasterizer OK')"
+    && CUDA_NVCC_FLAGS="-allow-unsupported-compiler" pip install --no-cache-dir . --no-build-isolation
 
 # --- Extensão 2: DifferentiableRenderer (c++/pybind11) -----------------------
-RUN cd hy3dpaint/DifferentiableRenderer && bash compile_mesh_painter.sh \
+# Em vez do compile_mesh_painter.sh (que depende de python3-config), compilamos
+# direto com os includes do pybind11 + Python (python3.10-config existe via
+# python3.10-dev), mais robusto.
+RUN ln -sf /usr/bin/python3.10-config /usr/bin/python3-config \
+    && cd hy3dpaint/DifferentiableRenderer \
+    && c++ -O3 -Wall -shared -std=c++11 -fPIC \
+        $(python -m pybind11 --includes) \
+        $(python3-config --includes) \
+        mesh_inpaint_processor.cpp \
+        -o mesh_inpaint_processor$(python3-config --extension-suffix) \
     && ls mesh_inpaint_processor*.so
 
 # --- RealESRGAN (upscaler usado na textura) ----------------------------------

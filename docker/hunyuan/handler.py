@@ -26,6 +26,16 @@ import sys
 import time
 import traceback
 
+# STUB do 'bpy' (Blender como módulo): o Hunyuan importa `bpy` no topo de
+# hy3dpaint/DifferentiableRenderer/mesh_utils.py, mas o bpy NÃO tem build para
+# Python 3.10 (o requirements pinava bpy==4.0, inexistente). O bpy só é usado em
+# funções de export Blender que NÃO estão no nosso caminho (shape->paint->glb via
+# trimesh/pygltflib). Registramos um módulo vazio para satisfazer o import.
+import types  # noqa: E402
+
+if "bpy" not in sys.modules:
+    sys.modules["bpy"] = types.ModuleType("bpy")
+
 # O repo precisa estar no path (clonado em /opt/Hunyuan3D-2.1 pelo Dockerfile).
 # A raiz do repo também (torchvision_fix.py fica lá). O demo.py roda da raiz.
 REPO = "/opt/Hunyuan3D-2.1"

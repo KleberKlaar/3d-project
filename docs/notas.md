@@ -174,9 +174,41 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - Apagados do hf-cache: TRELLIS.2-4B (32.5GB), TRELLIS-image-large, DINOv3, RMBG.
 - Mantido: FLUX.1-schnell (67.45 GB). Liberou ~37 GB.
 
-### Pendente — Fase 4 com Hunyuan3D 2.1
-- [ ] Worker docker/trellis_only -> renomear/criar para hunyuan. Build runtime.
-- [ ] Endpoint GPU 48GB, volume 3d-store. Testar gato.png -> .glb texturizado.
+### Fase 4 com Hunyuan3D 2.1 — estratégia de build
+- Worker em docker/hunyuan/ (Dockerfile sem conda, compila custom_rasterizer +
+  DifferentiableRenderer, baixa RealESRGAN; handler shape->paint PBR->glb).
+- ⚠️ O requirements pesado estoura o limite de 30min do build GitHub-nativo do
+  RunPod (chegou a 32min só no pip install). Erros resolvidos no caminho:
+  bpy==4.0 inexistente (removido via sed); custom_rasterizer sem torch
+  (--no-build-isolation).
+- DECISÃO: buildar a imagem FORA do RunPod-GitHub e usar "Deploy from a Docker
+  image" (só baixa, sem limite de build). Tentado GitHub Actions (falhou cedo,
+  não diagnosticado). Escolhido: **build LOCAL com Docker Desktop**.
+- Build local em andamento: `docker build -f docker/hunyuan/Dockerfile -t
+  3d-hunyuan:latest .` (log em build_hunyuan.log). Maquina: Docker 29.5.3,
+  WSL2, ~93GB livres no C: (apertado).
+
+### Build local — SUCESSO ✅
+- Imagem `3d-hunyuan:latest` buildada local (Docker Desktop). 33.2GB disco /
+  12.2GB content. Disco C: caiu para ~39GB livres.
+- Correções finais no Dockerfile (erros que só apareciam no build sem GPU):
+  - custom_rasterizer: removida a verificação `import` (libc10.so precisa de GPU,
+    não há GPU no build; a instalação basta, importa em runtime).
+  - DifferentiableRenderer: `python3-config` não existia -> symlink p/
+    python3.10-config + compilação c++ direta (sem o compile_mesh_painter.sh).
+
+### Push + endpoint ✅
+- Imagem publicada: **kklaar/3d-hunyuan:latest** no Docker Hub (digest
+  sha256:11d1f8c5...). Login Docker Hub OK (token PAT Read/Write/Delete).
+  - Obs: WSL2 teve DNS quebrado no daemon -> `wsl --shutdown` resetou e o
+    login passou.
+- Endpoint RunPod "Deploy from Docker image": **506zjm84ak8h4d** (3d-hunyuan,
+  AMPERE_48, volume 3d-store, timeout 600).
+- ⚠️ Imagem precisa estar PÚBLICA no Docker Hub senão o RunPod não baixa.
+
+### Pendente
+- [ ] 1º teste do gato (cold start longo: baixa imagem 12GB + modelos ~30GB).
+- [ ] Abrir o .glb texturizado e validar.
 
 ---
 
