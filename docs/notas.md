@@ -217,13 +217,31 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - ⚠️ SE o bpy for chamado de verdade na geração -> stub falha com AttributeError;
   aí contornar a chamada específica. Próximo teste é o juiz.
 
-### LIMPEZA pendente (espaço na máquina local)
-- [ ] Ao fim: `docker rmi 3d-hunyuan kklaar/3d-hunyuan` + `docker system prune -af`
-      (libera ~54GB). Opção: migrar build p/ GitHub Actions e zerar local.
+### Espaço local — RESOLVIDO
+- O `docker_data.vhdx` (WSL2) cresceu p/ 84GB e NÃO encolhe sozinho mesmo após
+  `docker system prune`. Solução: apagar imagens, fechar Docker Desktop,
+  `wsl --shutdown`, DELETAR manualmente
+  C:\Users\klebe\AppData\Local\Docker\wsl\disk\docker_data.vhdx (Docker recria
+  zerado). Liberou de 20GB -> 116GB livres.
+- LIÇÃO: para liberar espaço do Docker no Windows, prune não basta — deletar o
+  vhdx (com Docker vazio) é o jeito garantido.
+
+### Progresso dos testes (gato.png)
+- Stub do bpy FUNCIONOU: pipeline passou do bpy, rodou 318s (shape 3D gerado!).
+- Novo erro na etapa de TEXTURA PBR: `ModuleNotFoundError:
+  diffusers_modules.local.modules`. Causa: o custom_pipeline 'hunyuanpaintpbr'
+  do diffusers copia só pipeline.py p/ o cache, mas ele faz
+  `from .unet.modules import` e a pasta unet/ não é copiada.
+- Fix: handler copia a pasta hunyuanpaintpbr inteira (com unet/) p/
+  ~/.cache/.../diffusers_modules/local/ antes de carregar o paint pipeline.
+- Lição: shape funciona; só a textura (paint) dava trabalho. Push do RunPod usa
+  tag :latest -> forcar redeploy (saveEndpoint via API ou refresh no painel)
+  para o worker pegar a imagem nova.
 
 ### Pendente
-- [ ] Rebuild+push com stub do bpy; retestar gato -> .glb.
-- [ ] Abrir o .glb texturizado e validar.
+- [ ] Rebuild+push com fix do custom_pipeline; retestar gato -> .glb texturizado.
+- [ ] Abrir o .glb e validar geometria + textura.
+- [ ] LIMPEZA: docker rmi + system prune (~54GB).
 
 ---
 

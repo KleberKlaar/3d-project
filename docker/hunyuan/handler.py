@@ -149,19 +149,30 @@ def handler(event):
         mesh.export(shape_glb)
         print(f"[hunyuan] shape em {time.monotonic()-t0:.1f}s", flush=True)
 
-        out_glb = shape_glb
+        out_path = shape_glb
         if gerar_textura:
             print("[hunyuan] aplicando textura PBR...", flush=True)
             t1 = time.monotonic()
             # Salva a imagem original (sem fundo) para o paint usar.
             img_path = "/tmp/input.png"
             image.convert("RGB").save(img_path)
-            textured = "/tmp/textured.glb"
-            out_glb = paint_pipe(mesh_path=shape_glb, image_path=img_path,
-                                 output_mesh_path=textured)
-            print(f"[hunyuan] textura em {time.monotonic()-t1:.1f}s", flush=True)
+            # O paint exporta OBJ+MTL+textura (mesmo pedindo .glb no nome).
+            out_path = paint_pipe(mesh_path=shape_glb, image_path=img_path,
+                                  output_mesh_path="/tmp/textured.obj")
+            print(f"[hunyuan] textura em {time.monotonic()-t1:.1f}s -> {out_path}", flush=True)
 
-        with open(out_glb, "rb") as fh:
+        # GARANTE GLB de verdade: o paint do Hunyuan exporta OBJ (mtllib/v ...),
+        # não GLB binário. Carregamos com trimesh (que lê OBJ+MTL+textura) e
+        # exportamos como .glb com a textura embutida.
+        import trimesh
+
+        print(f"[hunyuan] convertendo {out_path} -> GLB...", flush=True)
+        cena = trimesh.load(out_path, process=False)
+        glb_final = "/tmp/model_final.glb"
+        cena.export(glb_final, file_type="glb")
+        print(f"[hunyuan] GLB final: {glb_final}", flush=True)
+
+        with open(glb_final, "rb") as fh:
             file_b64 = base64.b64encode(fh.read()).decode("ascii")
 
         return {
