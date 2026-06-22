@@ -143,10 +143,21 @@ def handler(event):
 
         from hy3dshape.rembg import BackgroundRemover
 
-        image = Image.open(io.BytesIO(base64.b64decode(image_b64))).convert("RGBA")
-        # Remove o fundo (BackgroundRemover embutido — sem RMBG gated).
-        if image.mode == "RGB":
-            image = BackgroundRemover()(image)
+        img_raw = Image.open(io.BytesIO(base64.b64decode(image_b64)))
+        # Remove o fundo SEMPRE que a imagem não tiver transparência real (canal
+        # alpha com pixels transparentes). Imagens do FLUX têm fundo sólido (sem
+        # alpha), então precisam do BackgroundRemover — senão o fundo vira parte
+        # do objeto 3D. (Bug anterior: convertia p/ RGBA antes e checava ==RGB,
+        # que nunca era verdade -> rembg nunca rodava.)
+        tem_alpha = img_raw.mode == "RGBA" and img_raw.getextrema()[3][0] < 255
+        permitir_skip = bool(job_input.get("skip_rembg", False))
+        if tem_alpha or permitir_skip:
+            image = img_raw.convert("RGBA")
+            print("[hunyuan] fundo já transparente (ou skip) — sem rembg", flush=True)
+        else:
+            print("[hunyuan] removendo fundo (rembg)...", flush=True)
+            image = BackgroundRemover()(img_raw.convert("RGB"))
+            image = image.convert("RGBA")
         print(f"[hunyuan] imagem {image.size}, textura={gerar_textura}", flush=True)
 
         shape_pipe, paint_pipe = _get_pipelines()

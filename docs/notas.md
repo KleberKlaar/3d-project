@@ -249,9 +249,23 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - ⚠️ Para atualizar a imagem: rebuild local -> push (wsl --shutdown antes p/
   DNS) -> saveEndpoint via API forca redeploy -> testar.
 
+### Fase 4 VALIDADA pelo usuário ✅ (mas textura precisa melhorar)
+- gato_final.glb abriu OK: mesh bom, mas TEXTURA distorcida/torta.
+- Causa provável: defaults mínimos (6 views, res 512) + imagem de entrada
+  complexa (gato com orelhas/rabo). Hunyuan vai melhor com objetos arredondados.
+- Melhoria 1 (params): views=9, resolution=768, texture_size=4096 (env vars
+  HY_NUM_VIEW/HY_RESOLUTION/HY_TEXTURE_SIZE). Commitado.
+- Melhoria 2 (input): gerada saidas/coruja.png (coruja ceramica, formas
+  redondas) — input ideal p/ testar qualidade.
+
+### Limpeza local FEITA ✅
+- Deletado docker_data.vhdx -> 117.9 GB livres. Docker Desktop precisa
+  reiniciar (recria disco zerado). Imagem segura no Docker Hub.
+
 ### Pendente
-- [ ] Usuário validar gato_final.glb no gltf-viewer (geometria + textura).
-- [ ] LIMPEZA: deletar docker_data.vhdx ou docker system prune (~33GB imagem).
+- [ ] Reiniciar Docker Desktop (apos deletar vhdx).
+- [ ] Rebuild (do zero, sem cache) com params de qualidade -> push -> redeploy.
+- [ ] Testar coruja.png com qualidade alta; comparar textura.
 
 ---
 
