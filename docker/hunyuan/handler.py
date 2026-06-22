@@ -158,6 +158,40 @@ def handler(event):
             print("[hunyuan] removendo fundo (rembg)...", flush=True)
             image = BackgroundRemover()(img_raw.convert("RGB"))
             image = image.convert("RGBA")
+        # CROP no objeto: corta a imagem na bounding box do alpha (objeto sem
+        # fundo) e adiciona uma margem pequena. Isso faz o objeto preencher o
+        # frame e evita que o Hunyuan gere um "chão/plano" gigante a partir do
+        # excesso de fundo ao redor de um objeto pequeno.
+        bbox = image.getbbox()  # caixa dos pixels não-transparentes
+        if bbox:
+            from PIL import Image as _PILImage
+
+            margem = int(0.08 * max(image.size))  # 8% de margem
+            x0 = max(0, bbox[0] - margem); y0 = max(0, bbox[1] - margem)
+            x1 = min(image.size[0], bbox[2] + margem); y1 = min(image.size[1], bbox[3] + margem)
+            cropada = image.crop((x0, y0, x1, y1))
+            # Centraliza num quadrado transparente (proporção 1:1, ideal p/ o modelo).
+            lado = max(cropada.size)
+            quad = _PILImage.new("RGBA", (lado, lado), (0, 0, 0, 0))
+            quad.paste(cropada, ((lado - cropada.size[0]) // 2,
+                                 (lado - cropada.size[1]) // 2))
+            image = quad
+            print(f"[hunyuan] cropado no objeto -> {image.size}", flush=True)
+
+        # Diagnóstico: confirma se o fundo ficou REALMENTE transparente.
+        alpha_min, alpha_max = image.getextrema()[3]
+        frac_transp = sum(1 for p in image.getdata() if p[3] < 10) / (image.size[0]*image.size[1])
+        print(f"[hunyuan] pos-rembg: mode={image.mode} alpha[min={alpha_min},max={alpha_max}] "
+              f"frac_transparente={frac_transp:.2f}", flush=True)
+
+        # Modo debug: retorna a imagem processada (pós-rembg) para inspeção visual.
+        if job_input.get("debug_image"):
+            buf = io.BytesIO()
+            image.save(buf, format="PNG")
+            return {"image_base64": base64.b64encode(buf.getvalue()).decode("ascii"),
+                    "alpha_min": alpha_min, "alpha_max": alpha_max,
+                    "frac_transparente": round(frac_transp, 3)}
+
         print(f"[hunyuan] imagem {image.size}, textura={gerar_textura}", flush=True)
 
         shape_pipe, paint_pipe = _get_pipelines()
