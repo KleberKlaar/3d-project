@@ -262,10 +262,28 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 - Deletado docker_data.vhdx -> 117.9 GB livres. Docker Desktop precisa
   reiniciar (recria disco zerado). Imagem segura no Docker Hub.
 
+### Refinamento de qualidade (iterativo)
+- coruja (params altos 9views/768): textura BOA. Mas 2 problemas resolvidos em
+  sequência:
+  1. Fundo virava parte do objeto -> rembg nunca rodava (condição ==RGB após
+     converter p/ RGBA). Corrigido: roda rembg se não houver alpha real.
+  2. Apareceu um PLANO/CHÃO gigante (fundo bege virou geometria de chão).
+     Fix: CROP na bbox do alpha + centraliza em quadrado transparente (objeto
+     preenche o frame, sem excesso de fundo). + diagnóstico de alpha +
+     modo debug_image. (commit 'crop no objeto')
+
+### Build LOCAL — fluxo a cada ajuste (decisão do usuário: manter local)
+1. (se vhdx deletado) reiniciar Docker Desktop
+2. docker build -f docker/hunyuan/Dockerfile -t kklaar/3d-hunyuan:latest .
+3. wsl --shutdown (DNS) -> docker push kklaar/3d-hunyuan:latest
+4. saveEndpoint via API (redeploy) -> testar
+- ⚠️ Cache NÃO sobrevive a restart do PC -> rebuild do zero (~25min) cada vez.
+- ⚠️ vhdx incha; ao faltar espaço: prune -> wsl --shutdown -> deletar
+  docker_data.vhdx -> reabrir Docker Desktop.
+
 ### Pendente
-- [ ] Reiniciar Docker Desktop (apos deletar vhdx).
-- [ ] Rebuild (do zero, sem cache) com params de qualidade -> push -> redeploy.
-- [ ] Testar coruja.png com qualidade alta; comparar textura.
+- [ ] Reiniciar Docker Desktop; rebuild com fix do crop -> push -> redeploy.
+- [ ] Testar coruja; confirmar que o plano/chão sumiu.
 
 ---
 

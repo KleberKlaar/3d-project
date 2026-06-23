@@ -130,6 +130,47 @@ def _get_pipelines():
     return _SHAPE, _PAINT
 
 
+def _remover_planos(mesh):
+    """
+    Remove componentes 'planos' (chão/parede que o Hunyuan às vezes gera).
+    Separa o mesh em componentes conectados e descarta os que têm uma dimensão
+    muito mais fina que as outras duas (característica de um plano). Mantém o(s)
+    componente(s) volumétrico(s) — o objeto real. Se nada sobrar, devolve o mesh
+    original (segurança).
+    """
+    try:
+        partes = mesh.split(only_watertight=False)
+    except Exception:  # noqa: BLE001
+        return mesh
+    if len(partes) <= 1:
+        return mesh
+
+    bons = []
+    for p in partes:
+        ext = sorted(p.extents)  # [menor, médio, maior] das 3 dimensões
+        if ext[2] == 0:
+            continue
+        # "achatamento" = menor dimensão / maior dimensão. Plano fino -> ~0.
+        achatamento = ext[0] / ext[2]
+        n_faces = len(p.faces)
+        # Descarta se for muito fino (plano) E grande/largo (cobre a cena).
+        eh_plano = achatamento < 0.04
+        if eh_plano:
+            print(f"[hunyuan] descartando componente plano: extents={p.extents} "
+                  f"achatamento={achatamento:.3f} faces={n_faces}", flush=True)
+            continue
+        bons.append(p)
+
+    if not bons:
+        print("[hunyuan] nenhum componente sobrou apos filtro — usa mesh original", flush=True)
+        return mesh
+    import trimesh as _tm
+
+    resultado = _tm.util.concatenate(bons) if len(bons) > 1 else bons[0]
+    print(f"[hunyuan] planos removidos: {len(partes)} componentes -> {len(bons)}", flush=True)
+    return resultado
+
+
 def handler(event):
     print("[hunyuan] handler iniciado", flush=True)
     try:
@@ -199,6 +240,9 @@ def handler(event):
         print("[hunyuan] gerando shape 3D...", flush=True)
         t0 = time.monotonic()
         mesh = shape_pipe(image=image)[0]
+        # Remove componentes "planos" (chão/parede): o Hunyuan às vezes gera um
+        # plano horizontal gigante na base. Mantém só os componentes 3D reais.
+        mesh = _remover_planos(mesh)
         shape_glb = "/tmp/shape.glb"
         mesh.export(shape_glb)
         print(f"[hunyuan] shape em {time.monotonic()-t0:.1f}s", flush=True)
