@@ -287,6 +287,53 @@ por quê. Ver a "Regra de ouro" no `CLAUDE.md`.
 
 ---
 
+## ESTADO ATUAL (parar aqui — retomar amanhã)
+
+### O que JÁ FUNCIONA (pipeline texto -> imagem -> 3D)
+- Endpoint FLUX `s2vqihw0zdngt8` (3d-flux). Gera imagem do prompt.
+  - ⚠️ OOM intermitente na GPU 24GB em 1024x1024. Workaround: gerar em 768x768
+    (via API: input width=768 height=768). 2a tentativa costuma passar.
+- Endpoint HUNYUAN `506zjm84ak8h4d` (3d-hunyuan, Deploy from Docker image
+  kklaar/3d-hunyuan:latest). Gera .glb texturizado da imagem.
+- Imagem Docker atual = commit do `_remover_planos` (filtro por COMPONENTE).
+
+### Resultados dos testes (em saidas/)
+- gato_real_3d.glb: ÓTIMO (volumétrico, sem plano, textura realista). ✅
+- coruja_*: textura boa, MAS gera PLANO/chão (objeto achatado/redondo induz isso).
+  O filtro por componente NÃO removeu o plano (split não separou — plano soldado).
+- espada_3d.glb: cabo/guarda EXCELENTE, mas a LÂMINA (fina/plana, na diagonal)
+  virou massa disforme. Hunyuan sofre com objetos finos/achatados em ângulo.
+
+### LIÇÕES de qualidade (Hunyuan)
+- Qualidade do 3D depende MUITO da imagem: objetos volumétricos e bem isolados
+  saem ótimos; objetos achatados/finos (coruja, lâmina) distorcem ou geram plano.
+- T-POSE: o FLUX RESISTE a T-pose perfeita (vies p/ A-pose). guerreiro2/3.png
+  ficaram em A-pose/V. Limitação conhecida do modelo de imagem.
+- Params de textura altos (env: HY_NUM_VIEW=9, HY_RESOLUTION=768,
+  HY_TEXTURE_SIZE=4096) já no Dockerfile -> textura boa.
+
+### FIX PRONTO no codigo, NAO buildado ainda
+- `_remover_planos` reescrito para filtrar por FACE (remove triângulos de plano
+  horizontal grande na base, mesmo soldado) + etapa por componente. Está em
+  docker/hunyuan/handler.py mas NÃO foi commitado/buildado (usuário pediu para
+  não buildar e testar os modelos como estão). Falta: commit + build + push +
+  redeploy para a coruja/objetos achatados não gerarem mais plano.
+
+### Build local — lembrete
+- rebuild do zero ~25min (cache não sobrevive a restart do PC). DNS do WSL cai:
+  `wsl --shutdown` antes de push/clone. vhdx incha: deletar docker_data.vhdx
+  com Docker vazio libera espaço.
+- IDEIA p/ parar de sofrer com build local: migrar p/ GitHub Actions (falhou 1x,
+  não diagnosticado) — cada ajuste viraria só `git push`.
+
+### Pendentes para amanhã
+- [ ] Decidir: buildar o fix de _remover_planos por FACE (resolve plano da coruja).
+- [ ] Investigar distorção de objetos finos/planos (lâmina) no Hunyuan.
+- [ ] (futuro) low-poly real = decimação do mesh no handler (mesh.simplify...).
+- [ ] (futuro) Fase 5 formal: juntar FLUX+rembg+Hunyuan num worker `docker/full`.
+
+---
+
 ## Fase 3 — FLUX.1-schnell (texto -> imagem)
 
 - `docker/flux_only/`: Dockerfile (base `pytorch/pytorch:2.4.1-cuda12.1-...`),

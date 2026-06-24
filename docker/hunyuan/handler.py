@@ -132,43 +132,76 @@ def _get_pipelines():
 
 def _remover_planos(mesh):
     """
-    Remove componentes 'planos' (chão/parede que o Hunyuan às vezes gera).
-    Separa o mesh em componentes conectados e descarta os que têm uma dimensão
-    muito mais fina que as outras duas (característica de um plano). Mantém o(s)
-    componente(s) volumétrico(s) — o objeto real. Se nada sobrar, devolve o mesh
-    original (segurança).
+    Remove o 'chão/plano' que o Hunyuan às vezes gera, em DUAS etapas:
+
+    1) Por FACE: remove triângulos de um plano horizontal grande na base —
+       faces com normal quase vertical (|ny|>0.9), na faixa de Y mínima, que
+       no conjunto cobrem uma área X,Z ampla. Funciona mesmo que o plano esteja
+       'soldado' ao objeto (o mesh.split sozinho não separava nesse caso).
+    2) Por COMPONENTE: após remover as faces do plano, descarta ilhas que ainda
+       sejam finas demais (achatamento < 0.04).
+
+    Devolve o mesh original se algo falhar ou se nada sobrar (segurança).
     """
-    try:
-        partes = mesh.split(only_watertight=False)
-    except Exception:  # noqa: BLE001
-        return mesh
-    if len(partes) <= 1:
-        return mesh
-
-    bons = []
-    for p in partes:
-        ext = sorted(p.extents)  # [menor, médio, maior] das 3 dimensões
-        if ext[2] == 0:
-            continue
-        # "achatamento" = menor dimensão / maior dimensão. Plano fino -> ~0.
-        achatamento = ext[0] / ext[2]
-        n_faces = len(p.faces)
-        # Descarta se for muito fino (plano) E grande/largo (cobre a cena).
-        eh_plano = achatamento < 0.04
-        if eh_plano:
-            print(f"[hunyuan] descartando componente plano: extents={p.extents} "
-                  f"achatamento={achatamento:.3f} faces={n_faces}", flush=True)
-            continue
-        bons.append(p)
-
-    if not bons:
-        print("[hunyuan] nenhum componente sobrou apos filtro — usa mesh original", flush=True)
-        return mesh
+    import numpy as np
     import trimesh as _tm
 
-    resultado = _tm.util.concatenate(bons) if len(bons) > 1 else bons[0]
-    print(f"[hunyuan] planos removidos: {len(partes)} componentes -> {len(bons)}", flush=True)
-    return resultado
+    try:
+        v = np.asarray(mesh.vertices)
+        f = np.asarray(mesh.faces)
+        if len(f) == 0:
+            return mesh
+        y = v[:, 1]
+        y_min, y_max = y.min(), y.max()
+        altura = max(y_max - y_min, 1e-6)
+        largura_xz = max(v[:, 0].max() - v[:, 0].min(),
+                         v[:, 2].max() - v[:, 2].min())
+
+        # Normais das faces e centro de cada face.
+        normais = np.asarray(mesh.face_normals)
+        centros = v[f].mean(axis=1)
+        ny = np.abs(normais[:, 1])
+        cy = centros[:, 1]
+
+        # Face é "chão" se: normal ~vertical E está no terço inferior do modelo.
+        limite_y = y_min + 0.06 * altura
+        faces_chao = (ny > 0.85) & (cy < limite_y)
+
+        # Só age se essas faces realmente cobrem uma área XZ grande (é um plano,
+        # não a barriga do objeto). Mede o espalhamento XZ dos centros suspeitos.
+        if faces_chao.sum() > 0 and largura_xz > 0:
+            cc = centros[faces_chao]
+            espalha_xz = max(cc[:, 0].max() - cc[:, 0].min(),
+                             cc[:, 2].max() - cc[:, 2].min())
+            cobre_cena = espalha_xz > 0.6 * largura_xz
+        else:
+            cobre_cena = False
+
+        if faces_chao.any() and cobre_cena:
+            keep = ~faces_chao
+            print(f"[hunyuan] removendo {faces_chao.sum()} faces de chao "
+                  f"(de {len(f)})", flush=True)
+            mesh = mesh.copy()
+            mesh.update_faces(keep)
+            mesh.remove_unreferenced_vertices()
+        else:
+            print("[hunyuan] nenhum plano horizontal grande detectado por face",
+                  flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[hunyuan] filtro por face falhou ({e}); segue", flush=True)
+
+    # Etapa 2: limpa ilhas finas remanescentes.
+    try:
+        partes = mesh.split(only_watertight=False)
+        if len(partes) > 1:
+            bons = [p for p in partes
+                    if sorted(p.extents)[2] > 0 and sorted(p.extents)[0] / sorted(p.extents)[2] >= 0.04]
+            if bons:
+                mesh = _tm.util.concatenate(bons) if len(bons) > 1 else bons[0]
+                print(f"[hunyuan] componentes: {len(partes)} -> {len(bons)}", flush=True)
+    except Exception:  # noqa: BLE001
+        pass
+    return mesh
 
 
 def handler(event):
